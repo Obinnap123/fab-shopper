@@ -5,12 +5,16 @@ import { ProductGrid } from "@/components/storefront/products/product-grid";
 import type { Metadata } from "next";
 
 type PageProps = {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 };
 
 export default async function CollectionPage({ params }: PageProps) {
+  const { slug } = await params;
+  if (!slug) {
+    notFound();
+  }
   const collection = await prisma.collection.findUnique({
-    where: { slug: params.slug },
+    where: { slug },
     include: { products: true }
   });
 
@@ -57,7 +61,11 @@ export default async function CollectionPage({ params }: PageProps) {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const collection = await prisma.collection.findUnique({ where: { slug: params.slug } });
+  const { slug } = await params;
+  if (!slug) {
+    return { title: "Collection Not Found | Fab Shopper" };
+  }
+  const collection = await prisma.collection.findUnique({ where: { slug } });
   if (!collection) {
     return { title: "Collection Not Found | Fab Shopper" };
   }

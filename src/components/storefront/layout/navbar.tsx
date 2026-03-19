@@ -49,7 +49,11 @@ export function StorefrontNavbar() {
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-7 text-[13px] uppercase tracking-[0.08em] text-[var(--brand-cream)] md:flex">
+          <nav
+            className={`hidden items-center gap-7 text-[13px] uppercase tracking-[0.08em] md:flex ${
+              scrolled ? "text-[var(--brand-cream)]" : "text-[var(--brand-gold)]"
+            }`}
+          >
             <Link href="/shop" className="transition hover:text-[var(--brand-gold)]">
               Shop
             </Link>
@@ -161,11 +165,21 @@ export function StorefrontNavbar() {
               className="absolute right-0 top-0 h-full w-[78vw] max-w-xs bg-[var(--brand-green)] p-6 text-[var(--brand-cream)]"
               onClick={(event) => event.stopPropagation()}
             >
-              <div className="space-y-4 text-sm uppercase tracking-[0.12em]">
-                <Link href="/shop">Shop</Link>
-                <Link href="/collections/new-arrivals">Collections</Link>
-                <Link href="/about">About</Link>
-                <Link href="/contact">Contact</Link>
+              <div className="space-y-3 text-sm uppercase tracking-[0.12em]">
+                {[
+                  { href: "/shop", label: "Shop" },
+                  { href: "/collections/new-arrivals", label: "Collections" },
+                  { href: "/about", label: "About" },
+                  { href: "/contact", label: "Contact" }
+                ].map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="block rounded-xl border border-[rgba(201,168,76,0.25)] px-4 py-3 text-[var(--brand-cream)] transition hover:border-[rgba(201,168,76,0.6)] hover:text-[var(--brand-gold)]"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
               </div>
             </motion.div>
           </motion.div>
