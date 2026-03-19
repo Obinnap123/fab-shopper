@@ -1,35 +1,56 @@
-const arrivals = [
-  { name: "Palm Silk Set", price: "?48,000" },
-  { name: "Zina Maxi Dress", price: "?62,500" },
-  { name: "Noir Wrap Blazer", price: "?58,000" },
-  { name: "Gold Coast Bag", price: "?39,000" }
-];
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
+
+import { ProductCard } from "@/components/storefront/products/product-card";
+
+type Product = {
+  id: string;
+  name: string;
+  price: number;
+  discountedPrice?: number | null;
+  images: string[];
+  slug: string;
+};
 
 export function NewArrivalsSection() {
+  const { data } = useQuery({
+    queryKey: ["new-arrivals"],
+    queryFn: async () => {
+      const res = await fetch("/api/products?sort=newest&limit=8");
+      const json = await res.json();
+      return (json.data ?? []) as Product[];
+    },
+    staleTime: 1000 * 60 * 5
+  });
+
+  const products = data ?? [];
+
   return (
-    <section className="bg-cream py-20">
+    <section className="bg-[var(--brand-green)] py-24 text-white">
       <div className="mx-auto w-full max-w-6xl px-6">
-        <div className="mb-10 flex items-end justify-between">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.4em] text-gold">New Arrivals</p>
-            <h2 className="mt-3 font-serif text-4xl text-forest">Fresh arrivals, Lagos-made.</h2>
-          </div>
-          <button className="hidden rounded-full border border-forest px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-forest md:inline-flex">
-            Shop All
-          </button>
-        </div>
-        <div className="grid gap-6 md:grid-cols-4">
-          {arrivals.map((product) => (
-            <div
-              key={product.name}
-              className="group rounded-3xl border border-forest/10 bg-white p-4 shadow-[0_20px_40px_rgba(26,60,46,0.08)]"
+            <p className="text-[11px] uppercase tracking-[0.5em] text-[var(--brand-gold)]">Just Arrived</p>
+            <h2
+              className="mt-3 text-[52px] text-[var(--brand-gold)]"
+              style={{ fontFamily: "var(--font-display)" }}
             >
-              <div className="h-48 rounded-2xl bg-gradient-to-br from-forest/80 via-forest to-black/80" />
-              <div className="mt-4">
-                <p className="text-sm font-semibold text-forest">{product.name}</p>
-                <p className="mt-1 text-xs uppercase tracking-[0.3em] text-gold">{product.price}</p>
-              </div>
-            </div>
+              New This Week
+            </h2>
+          </div>
+          <Link
+            href="/shop"
+            className="text-sm uppercase tracking-[0.2em] text-[var(--brand-gold)] hover:underline"
+          >
+            View All →
+          </Link>
+        </div>
+
+        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {products.map((product) => (
+            <ProductCard key={product.id} product={product} theme="dark" />
           ))}
         </div>
       </div>

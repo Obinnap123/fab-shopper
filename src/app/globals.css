@@ -3,10 +3,20 @@
 @tailwind utilities;
 
 :root {
-  --color-forest: #1a3c2e;
-  --color-gold: #c9a84c;
-  --color-cream: #f6f1e8;
-  --color-ink: #0b1a14;
+  --brand-green: #1a3c2e;
+  --brand-green-light: #2a5240;
+  --brand-green-dark: #0f2419;
+  --brand-gold: #c9a84c;
+  --brand-gold-light: #dfc06a;
+  --brand-gold-dark: #a8872e;
+  --brand-cream: #faf7f2;
+  --brand-cream-dark: #f0ebe3;
+  --text-dark: #1a1a18;
+  --text-muted: #5f5e5a;
+  --font-display: "Cormorant Garamond", serif;
+  --font-body: "DM Sans", sans-serif;
+  --transition-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --transition-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 * {
@@ -15,9 +25,9 @@
 
 body {
   min-height: 100vh;
-  font-family: var(--font-sans);
-  background: var(--color-cream);
-  color: var(--color-ink);
+  font-family: var(--font-body);
+  background: var(--brand-cream);
+  color: var(--text-dark);
   text-rendering: optimizeLegibility;
 }
 

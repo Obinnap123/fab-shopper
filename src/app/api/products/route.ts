@@ -37,12 +37,14 @@ const createProductSchema = z.object({
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const take = Number(searchParams.get("take") ?? 20);
+  const limitParam = searchParams.get("limit");
+  const take = Number(limitParam ?? searchParams.get("take") ?? 20);
   const skip = Number(searchParams.get("skip") ?? 0);
   const search = searchParams.get("search")?.trim();
   const status = searchParams.get("status") ?? undefined;
   const productType = searchParams.get("productType") ?? undefined;
   const collectionId = searchParams.get("collectionId") ?? undefined;
+  const sort = searchParams.get("sort") ?? "newest";
   const minPrice = searchParams.get("minPrice");
   const maxPrice = searchParams.get("maxPrice");
   const stock = searchParams.get("stock");
@@ -83,13 +85,20 @@ export async function GET(request: Request) {
     where.stockQuantity = { lte: 0 };
   }
 
+  const orderBy =
+    sort === "price-asc"
+      ? { price: "asc" }
+      : sort === "price-desc"
+        ? { price: "desc" }
+        : { createdAt: "desc" };
+
   const [products, total] = await Promise.all([
     prisma.product.findMany({
-      take,
+      take: Number.isFinite(take) ? take : 20,
       skip,
       where,
       include: { collections: true, variants: true },
-      orderBy: { createdAt: "desc" }
+      orderBy
     }),
     prisma.product.count({ where })
   ]);
