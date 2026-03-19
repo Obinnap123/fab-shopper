@@ -37,8 +37,10 @@ const SelectContent = React.forwardRef<
   <SelectPrimitive.Portal>
     <SelectPrimitive.Content
       ref={ref}
+      position="popper"
+      sideOffset={8}
       className={cn(
-        "z-50 overflow-hidden rounded-2xl border border-forest/15 bg-white shadow-lg",
+        "z-[70] overflow-hidden rounded-2xl border border-forest/15 bg-white shadow-lg",
         className
       )}
       {...props}

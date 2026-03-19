@@ -23,15 +23,59 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const take = Number(searchParams.get("take") ?? 20);
   const skip = Number(searchParams.get("skip") ?? 0);
+  const search = searchParams.get("search")?.trim();
+  const dateRange = searchParams.get("dateRange") ?? "this-month";
+  const delivery = searchParams.get("delivery") ?? "all";
 
-  const orders = await prisma.order.findMany({
-    take,
-    skip,
-    orderBy: { createdAt: "desc" },
-    include: { customer: true, items: true }
-  });
+  const where: Record<string, unknown> = {};
 
-  return NextResponse.json({ data: orders });
+  if (search) {
+    where.OR = [
+      { orderNumber: { contains: search, mode: "insensitive" } },
+      { customer: { firstName: { contains: search, mode: "insensitive" } } },
+      { customer: { lastName: { contains: search, mode: "insensitive" } } }
+    ];
+  }
+
+  if (delivery === "delivery") {
+    where.shippingFee = { gt: 0 };
+  }
+
+  if (delivery === "pickup") {
+    where.shippingFee = { lte: 0 };
+  }
+
+  const now = new Date();
+  let start: Date | null = null;
+  let end: Date | null = null;
+
+  if (dateRange === "this-month") {
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
+    end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  } else if (dateRange === "last-month") {
+    start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    end = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else if (dateRange === "last-3") {
+    start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+    end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  }
+
+  if (start && end) {
+    where.createdAt = { gte: start, lt: end };
+  }
+
+  const [orders, total] = await Promise.all([
+    prisma.order.findMany({
+      take,
+      skip,
+      where,
+      orderBy: { createdAt: "desc" },
+      include: { customer: true, items: true }
+    }),
+    prisma.order.count({ where })
+  ]);
+
+  return NextResponse.json({ data: orders, total });
 }
 
 export async function POST(request: Request) {

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -6,6 +6,7 @@ import { Box, ChevronDown, Package, Plus, Tag, Wallet } from "lucide-react";
 
 import { AdminShell } from "@/components/admin/layout/admin-shell";
 import { ProductsClient } from "@/components/admin/products/products-client";
+import { CollectionsClient } from "@/components/admin/products/collections-client";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -116,9 +117,10 @@ export default function ProductsPage() {
         </div>
 
         <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-[0_12px_30px_rgba(26,60,46,0.08)]">
-          <ProductsClient />
+          {activeTab === "products" ? <ProductsClient /> : <CollectionsClient />}
         </div>
       </section>
     </AdminShell>
   );
 }
+

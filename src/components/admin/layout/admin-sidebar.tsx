@@ -27,59 +27,40 @@ const navSections = [
   {
     title: "Orders",
     icon: CalendarCheck,
+    href: "/admin/orders",
     items: [
-      { label: "Orders", href: "/admin/orders" },
       { label: "Abandoned Orders", href: "/admin/orders/abandoned" },
     ],
   },
   {
     title: "Customers",
     icon: UserCircle,
-    items: [
-      { label: "All Customers", href: "/admin/customers" },
-      { label: "Customer Groups", href: "/admin/customers/groups" },
-      { label: "Newsletter", href: "/admin/customers/newsletter" },
-    ],
+    href: "/admin/customers",
   },
   {
     title: "Analytics",
     icon: ChartNoAxesColumn,
-    items: [
-      { label: "Sales", href: "/admin/analytics" },
-      { label: "Transactions", href: "/admin/analytics/transactions" },
-      { label: "Products", href: "/admin/analytics/products" },
-      { label: "Customers", href: "/admin/analytics/customers" },
-      { label: "Campaigns", href: "/admin/analytics/campaigns" },
-    ],
+    href: "/admin/analytics",
   },
   {
     title: "Operations",
     icon: Truck,
+    href: "/admin/shipping",
     items: [
-      { label: "Shipping Methods", href: "/admin/shipping" },
       { label: "Staff Accounts", href: "/admin/staff" },
       { label: "Store Location", href: "/admin/store/location" },
-    ],
+      { label: "General Settings", href: "/admin/store/general-settings" }
+    ]
   },
   {
     title: "Finance",
     icon: CreditCard,
-    items: [
-      { label: "Transactions", href: "/admin/finance/transactions" },
-      { label: "Expenses", href: "/admin/finance/expenses" },
-      { label: "Payment Methods", href: "/admin/finance/payment-methods" },
-      { label: "Bank Details", href: "/admin/finance/bank-details" },
-    ],
+    href: "/admin/finance/transactions",
   },
   {
     title: "Store Setup",
     icon: Settings,
-    items: [
-      { label: "Store Information", href: "/admin/store/information" },
-      { label: "Taxes", href: "/admin/store/taxes" },
-      { label: "General Settings", href: "/admin/store/general-settings" },
-      { label: "Connected Apps", href: "/admin/store/apps" },
-    ],
+    href: "/admin/store/information",
   },
   { title: "Extensions", href: "/admin/apps", icon: Boxes },
 ];
@@ -145,9 +126,7 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
 
           return (
             <div key={section.title} className="space-y-2">
-              <button
-                type="button"
-                onClick={() => toggleSection(section.title)}
+              <div
                 className={cn(
                   "flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold transition",
                   isActive
@@ -155,17 +134,35 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
                     : "text-cream/80 hover:bg-cream/10",
                 )}
               >
-                <span className="flex items-center gap-3">
-                  <Icon className="h-4 w-4 text-gold" />
-                  {section.title}
-                </span>
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 transition",
-                    isOpen ? "rotate-180" : "",
-                  )}
-                />
-              </button>
+                {section.href ? (
+                  <Link
+                    href={section.href}
+                    onClick={onNavigate}
+                    className="flex flex-1 items-center gap-3"
+                  >
+                    <Icon className="h-4 w-4 text-gold" />
+                    {section.title}
+                  </Link>
+                ) : (
+                  <span className="flex flex-1 items-center gap-3">
+                    <Icon className="h-4 w-4 text-gold" />
+                    {section.title}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => toggleSection(section.title)}
+                  className="rounded-full p-1 transition hover:bg-cream/10"
+                  aria-label={`Toggle ${section.title}`}
+                >
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 transition",
+                      isOpen ? "rotate-180" : "",
+                    )}
+                  />
+                </button>
+              </div>
               <div
                 className={cn(
                   "grid transition-[grid-template-rows,opacity] duration-300 ease-out",
@@ -176,31 +173,14 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
               >
                 <ul
                   className={cn(
-                    "relative overflow-hidden pl-10 text-sm text-cream/70 transition-all duration-300",
-                    "before:absolute before:left-2 before:top-1 before:bottom-1 before:w-px before:bg-cream/40 before:content-['']",
+                    "overflow-hidden pl-8 text-sm text-cream/70 transition-all duration-300",
                     isOpen ? "translate-y-0" : "-translate-y-2",
                   )}
                 >
                   {section.items?.map((item) => {
                     const itemActive = pathname.startsWith(item.href);
                     return (
-                      <li key={item.href} className="relative">
-                        <span className="pointer-events-none absolute left-2 top-0 text-cream/40">
-                          <svg
-                            viewBox="0 0 12 16"
-                            className="h-4 w-4"
-                            fill="none"
-                            aria-hidden="true"
-                          >
-                            <path
-                              d="M0 0v8c0 3 2 5 5 5h7"
-                              stroke="currentColor"
-                              strokeWidth="1.2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </span>
+                      <li key={item.href}>
                         <Link
                           href={item.href}
                           onClick={onNavigate}
@@ -211,6 +191,7 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
                               : "hover:bg-cream/10",
                           )}
                         >
+                          <span className="h-1.5 w-1.5 rounded-full bg-cream/40" />
                           {item.label}
                         </Link>
                       </li>
