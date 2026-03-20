@@ -3,7 +3,8 @@ import { cookies } from "next/headers";
 import { adminCookieName, verifyAdminToken } from "@/lib/auth";
 
 export async function GET() {
-  const token = cookies().get(adminCookieName)?.value;
+  const cookieStore = await cookies();
+  const token = cookieStore.get(adminCookieName)?.value;
   if (!token) {
     return NextResponse.json({ admin: null }, { status: 401 });
   }
