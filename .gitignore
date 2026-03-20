@@ -8,3 +8,6 @@ coverage
 .turbo
 .vercel
 *.log
+
+# TypeScript build artifacts
+tsconfig.tsbuildinfo
