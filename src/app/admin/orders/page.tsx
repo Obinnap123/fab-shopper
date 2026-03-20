@@ -1,4 +1,5 @@
-﻿import { BadgeDollarSign, CheckCircle2, ClipboardCheck, CreditCard, PackageCheck } from "lucide-react";
+import { Suspense } from "react";
+import { BadgeDollarSign, CheckCircle2, ClipboardCheck, CreditCard, PackageCheck } from "lucide-react";
 
 import { AdminShell } from "@/components/admin/layout/admin-shell";
 import { OrdersClient } from "@/components/admin/orders/orders-client";
@@ -6,7 +7,7 @@ import { OrdersHeaderActions } from "@/components/admin/orders/orders-header-act
 import { prisma } from "@/lib/prisma";
 
 const formatCurrency = (value: number) =>
-  `₦${value.toLocaleString("en-NG", {
+  `?${value.toLocaleString("en-NG", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })}`;
@@ -85,11 +86,10 @@ export default async function OrdersPage() {
           ))}
         </div>
 
-        <OrdersClient />
+        <Suspense fallback={<div className="py-6 text-sm text-forest/60">Loading orders�</div>}>
+          <OrdersClient />
+        </Suspense>
       </section>
     </AdminShell>
   );
 }
-
-
-
