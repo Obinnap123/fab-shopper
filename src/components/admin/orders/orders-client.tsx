@@ -53,7 +53,7 @@ type Order = {
 const statusBadge = (status: string) => {
   if (status === "COMPLETED") return "success";
   if (status === "SHIPPED") return "info";
-  if (status === "CANCELLED") return "destructive";
+  if (status === "CANCELLED") return "danger";
   return "warning";
 };
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { slugify } from "@/lib/slug";
 
 const createProductSchema = z.object({
@@ -85,7 +86,7 @@ export async function GET(request: Request) {
     where.stockQuantity = { lte: 0 };
   }
 
-  const orderBy =
+  const orderBy: Prisma.ProductOrderByWithRelationInput =
     sort === "price-asc"
       ? { price: "asc" }
       : sort === "price-desc"

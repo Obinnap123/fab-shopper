@@ -17,8 +17,8 @@ const config: Config = {
         moss: "#0F2A21"
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
-        serif: ["var(--font-serif)", "serif"]
+        sans: ["var(--font-body)", "system-ui", "sans-serif"],
+        serif: ["var(--font-display)", "serif"]
       },
       boxShadow: {
         "gold-glow": "0 10px 30px rgba(201, 168, 76, 0.18)"
