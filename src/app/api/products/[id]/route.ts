@@ -13,9 +13,10 @@ const updateProductSchema = z.object({
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const product = await prisma.product.findUnique({ where: { id: params.id } });
+  const { id } = await params;
+  const product = await prisma.product.findUnique({ where: { id } });
   if (!product) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -24,8 +25,9 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await request.json().catch(() => null);
   const parsed = updateProductSchema.safeParse(body);
 
@@ -34,7 +36,7 @@ export async function PUT(
   }
 
   const product = await prisma.product.update({
-    where: { id: params.id },
+    where: { id },
     data: parsed.data
   });
 
@@ -43,8 +45,9 @@ export async function PUT(
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  await prisma.product.delete({ where: { id: params.id } });
+  const { id } = await params;
+  await prisma.product.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

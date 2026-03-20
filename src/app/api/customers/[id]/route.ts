@@ -11,9 +11,10 @@ const updateCustomerSchema = z.object({
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const customer = await prisma.customer.findUnique({ where: { id: params.id } });
+  const { id } = await params;
+  const customer = await prisma.customer.findUnique({ where: { id } });
   if (!customer) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -22,8 +23,9 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await request.json().catch(() => null);
   const parsed = updateCustomerSchema.safeParse(body);
 
@@ -32,7 +34,7 @@ export async function PUT(
   }
 
   const customer = await prisma.customer.update({
-    where: { id: params.id },
+    where: { id },
     data: parsed.data
   });
 
@@ -41,8 +43,9 @@ export async function PUT(
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  await prisma.customer.delete({ where: { id: params.id } });
+  const { id } = await params;
+  await prisma.customer.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

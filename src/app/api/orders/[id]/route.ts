@@ -9,10 +9,11 @@ const updateOrderSchema = z.object({
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const order = await prisma.order.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { customer: true, items: true }
   });
   if (!order) {
@@ -23,8 +24,9 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await request.json().catch(() => null);
   const parsed = updateOrderSchema.safeParse(body);
 
@@ -33,7 +35,7 @@ export async function PUT(
   }
 
   const order = await prisma.order.update({
-    where: { id: params.id },
+    where: { id },
     data: parsed.data
   });
 
