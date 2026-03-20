@@ -7,7 +7,7 @@ import { OrdersHeaderActions } from "@/components/admin/orders/orders-header-act
 import { prisma } from "@/lib/prisma";
 
 const formatCurrency = (value: number) =>
-  `?${value.toLocaleString("en-NG", {
+  `NGN ${value.toLocaleString("en-NG", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })}`;
@@ -86,7 +86,7 @@ export default async function OrdersPage() {
           ))}
         </div>
 
-        <Suspense fallback={<div className="py-6 text-sm text-forest/60">Loading orders…</div>}>
+        <Suspense fallback={<div className="py-6 text-sm text-forest/60">Loading orders...</div>}>
           <OrdersClient />
         </Suspense>
       </section>
