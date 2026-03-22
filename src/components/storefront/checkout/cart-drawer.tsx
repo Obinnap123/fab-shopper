@@ -18,7 +18,7 @@ export function CartDrawer() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-[rgba(10,25,15,0.5)]"
+            className="fixed inset-0 z-[100] bg-[rgba(10,25,15,0.5)]"
             onClick={closeCart}
           />
           <motion.aside
@@ -26,7 +26,7 @@ export function CartDrawer() {
             animate={{ x: 0 }}
             exit={{ x: 420 }}
             transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="fixed right-0 top-0 z-50 h-full w-full max-w-[420px] bg-[var(--brand-cream)] shadow-2xl"
+            className="fixed right-0 top-0 z-[100] h-full w-full max-w-[420px] bg-[var(--brand-cream)] shadow-2xl"
           >
             <div className="flex h-full flex-col">
               <div className="flex items-center justify-between border-b border-[rgba(26,60,46,0.1)] px-6 py-5">

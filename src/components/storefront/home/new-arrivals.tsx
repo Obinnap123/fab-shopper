@@ -29,7 +29,7 @@ export function NewArrivalsSection() {
 
   return (
     <section className="bg-[var(--brand-green)] py-24 text-white">
-      <div className="mx-auto w-full max-w-6xl px-6">
+      <div className="mx-auto w-full max-w-7xl px-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-[11px] uppercase tracking-[0.5em] text-[var(--brand-gold)]">Just Arrived</p>
@@ -44,7 +44,7 @@ export function NewArrivalsSection() {
             href="/shop"
             className="text-sm uppercase tracking-[0.2em] text-[var(--brand-gold)] hover:underline"
           >
-            View All →
+            View All {"->"}
           </Link>
         </div>
 

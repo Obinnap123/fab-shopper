@@ -1,111 +1,148 @@
-"use client";
+"use client"
 
-import { useEffect, useRef } from "react";
-import Image from "next/image";
-import gsap from "gsap";
+import { useEffect, useRef } from "react"
+import Image from "next/image"
+import Link from "next/link"
+import { motion } from "framer-motion"
+
+const containerVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.15,
+      delayChildren: 0.3,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] },
+  },
+}
 
 export function HeroSection() {
-  const labelRef = useRef<HTMLParagraphElement | null>(null);
-  const headlineRef = useRef<HTMLHeadingElement | null>(null);
-  const subRef = useRef<HTMLParagraphElement | null>(null);
-  const buttonsRef = useRef<HTMLDivElement | null>(null);
-  const imageRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      const headlineLines = headlineRef.current?.querySelectorAll("span") ?? [];
-      const tl = gsap.timeline({ delay: 0.2 });
-
-      tl.fromTo(labelRef.current, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" })
-        .fromTo(
-          headlineLines,
-          { opacity: 0, y: 60 },
-          { opacity: 1, y: 0, duration: 0.8, stagger: 0.15, ease: "power3.out" },
-          "-=0.3"
-        )
-        .fromTo(subRef.current, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.4")
-        .fromTo(
-          buttonsRef.current,
-          { opacity: 0, y: 20 },
-          { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" },
-          "-=0.3"
-        )
-        .fromTo(
-          imageRef.current,
-          { clipPath: "inset(0 100% 0 0)" },
-          { clipPath: "inset(0 0% 0 0)", duration: 1.2, ease: "power4.inOut" },
-          0.1
-        );
-    });
-
-    return () => ctx.revert();
-  }, []);
-
   return (
-    <section className="relative min-h-[100vh] bg-[var(--brand-green)] text-white">
-      <div className="mx-auto grid min-h-[100vh] w-full max-w-6xl grid-cols-1 items-center gap-10 px-6 py-20 md:grid-cols-[55%_45%]">
-        <div className="space-y-6">
-          <p
-            ref={labelRef}
-            className="text-[11px] uppercase tracking-[0.5em] text-[var(--brand-gold)]"
-            style={{ fontFamily: "var(--font-body)" }}
-          >
-            New Collection 2025
+    <section
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100svh",
+        minHeight: 600,
+        overflow: "hidden",
+        marginTop: 0,
+      }}
+    >
+      <Image
+        src="https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1800&q=85"
+        alt="Fab Shopper — Delight Closet Revolution"
+        fill
+        priority
+        quality={85}
+        style={{ objectFit: "cover", objectPosition: "center top" }}
+        sizes="100vw"
+      />
+
+      {/* 
+        Single sleek gradient overlay matching shoptobiri.com details
+        (Transitioning strictly from dark bottom to transparent middle) 
+      */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.15) 30%, transparent 100%)",
+        }}
+      />
+
+      {/* Optional very-light dim overall to guarantee high contrast across all devices */}
+      <div className="absolute inset-0 bg-black/10" />
+
+      {/* HERO CONTENT - Positioned to share absolute exact padded axis with Navbar */}
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="absolute bottom-16 left-0 right-0 mx-auto w-full max-w-7xl px-8"
+      >
+        <motion.p
+          variants={itemVariants}
+          className="font-body text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--brand-gold)] mb-4 opacity-90"
+        >
+          New Collection · 2025
+        </motion.p>
+
+        <motion.h1
+          variants={itemVariants}
+          className="font-display italic text-white"
+          style={{
+            fontSize: "clamp(56px, 7vw, 96px)", 
+            fontWeight: 400,
+            lineHeight: 0.92,
+            marginBottom: "16px",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          Delight
+          <br />
+          <span className="text-[var(--brand-gold)]">Closet</span>
+          <br />
+          Revolution
+        </motion.h1>
+
+        <motion.div
+          variants={itemVariants}
+          className="mt-8 flex flex-wrap items-end justify-between gap-8"
+        >
+          <p className="font-body text-[15px] leading-[1.6] text-white/75 sm:max-w-[400px]">
+            Premium fashion, curated for you. Designer shoes, bags, clothing and
+            accessories — delivered to your door in Lagos.
           </p>
-          <h1
-            ref={headlineRef}
-            className="text-[72px] leading-[0.95] text-[var(--brand-gold)] md:text-[96px]"
-            style={{ fontFamily: "var(--font-display)", fontStyle: "italic" }}
-          >
-            {["Delight", "Closet", "Revolution"].map((line) => (
-              <span key={line} className="block">
-                {line}
-              </span>
-            ))}
-          </h1>
-          <p
-            ref={subRef}
-            className="max-w-[360px] text-[16px] text-white/75"
-            style={{ fontFamily: "var(--font-body)" }}
-          >
-            Premium fashion, curated for you. Shoes, bags, clothing and accessories from top
-            designers — delivered to your door in Lagos.
-          </p>
-          <div ref={buttonsRef} className="flex flex-wrap gap-4">
-            <button
-              className="rounded-none bg-[var(--brand-gold)] px-8 py-4 text-[13px] uppercase tracking-[0.12em] text-[var(--brand-green)]"
-              style={{ fontFamily: "var(--font-body)" }}
+
+          {/* CTA Buttons - Refined minimal aesthetic */}
+          <div className="flex shrink-0 gap-4">
+            <Link
+              href="/shop"
+              className="inline-flex items-center rounded bg-white px-8 py-3.5 font-body text-[12px] font-bold uppercase tracking-[0.1em] text-black transition-transform hover:-translate-y-0.5"
             >
               Shop Now
-            </button>
-            <button
-              className="rounded-none border border-[var(--brand-gold)] px-8 py-4 text-[13px] uppercase tracking-[0.12em] text-[var(--brand-gold)]"
-              style={{ fontFamily: "var(--font-body)" }}
+            </Link>
+
+            <Link
+              href="/collections/new-arrivals"
+              className="inline-flex items-center rounded border border-white/50 bg-transparent px-8 py-3.5 font-body text-[12px] font-medium uppercase tracking-[0.1em] text-white transition-all hover:-translate-y-0.5 hover:border-white hover:bg-white/10"
             >
-              View Lookbook
-            </button>
+              Discover
+            </Link>
           </div>
-        </div>
+        </motion.div>
+      </motion.div>
 
-        <div className="relative h-[420px] w-full md:h-[620px]">
-          <div ref={imageRef} className="absolute inset-0 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-[rgba(15,36,25,0.65)] via-transparent to-transparent" />
-            <Image
-              src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1800"
-              alt="Fab Shopper hero"
-              fill
-              className="object-cover"
-              priority
-              sizes="(max-width: 768px) 100vw, 45vw"
-            />
-          </div>
+      {/* Scroll indicator */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.5, duration: 0.6 }}
+        className="absolute bottom-[24px] left-1/2 flex -translate-x-1/2 flex-col items-center gap-[6px]"
+      >
+        <p className="font-body text-[9px] uppercase tracking-[0.2em] text-white/50 m-0">
+          Scroll
+        </p>
+        <div className="relative h-[40px] w-[1px] overflow-hidden bg-white/20">
+          <motion.div
+            animate={{ y: [-40, 40] }}
+            transition={{
+              repeat: Infinity,
+              duration: 1.5,
+              ease: "easeInOut",
+            }}
+            className="absolute left-0 right-0 top-0 h-[60%] bg-white"
+          />
         </div>
-      </div>
-
-      <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 text-[var(--brand-gold)]">
-        <div className="h-6 w-[1px] animate-bounce bg-[var(--brand-gold)]" />
-        <span className="text-[10px] uppercase tracking-[0.4em]">Scroll</span>
-      </div>
+      </motion.div>
     </section>
-  );
+  )
 }

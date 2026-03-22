@@ -2,11 +2,14 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { PageSpacer } from "@/components/storefront/layout/page-spacer";
 
 export default function OrderConfirmationPage() {
   return (
-    <div className="flex min-h-[80vh] items-center justify-center bg-[var(--brand-green)] px-6 py-20 text-center text-white">
-      <div className="w-full max-w-xl space-y-6">
+    <>
+      <PageSpacer />
+      <div className="flex min-h-[80vh] items-center justify-center bg-[var(--brand-green)] px-8 py-20 text-center text-white">
+        <div className="w-full max-w-xl space-y-6">
         <motion.svg
           width="120"
           height="120"
@@ -65,5 +68,6 @@ export default function OrderConfirmationPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

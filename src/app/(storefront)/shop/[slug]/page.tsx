@@ -1,15 +1,17 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ProductDetail } from "@/components/storefront/products/product-detail";
+import { PageSpacer } from "@/components/storefront/layout/page-spacer";
 import type { Metadata } from "next";
 
 type PageProps = {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
   const product = await prisma.product.findUnique({
-    where: { slug: params.slug }
+    where: { slug }
   });
 
   if (!product) {
@@ -30,8 +32,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ProductPage({ params }: PageProps) {
+  const { slug } = await params;
   const product = await prisma.product.findUnique({
-    where: { slug: params.slug },
+    where: { slug },
     include: { variants: true }
   });
 
@@ -40,8 +43,9 @@ export default async function ProductPage({ params }: PageProps) {
   }
 
   return (
-    <div className="bg-[var(--brand-cream)] px-6 py-16">
-      <div className="mx-auto w-full max-w-6xl">
+    <div className="bg-[var(--brand-cream)] px-8 py-20">
+      <PageSpacer />
+      <div className="mx-auto w-full max-w-7xl">
         <ProductDetail
           product={{
             id: product.id,
@@ -53,7 +57,10 @@ export default async function ProductPage({ params }: PageProps) {
             stockQuantity: product.stockQuantity,
             shortDescription: product.shortDescription,
             longDescription: product.longDescription,
-            variants: product.variants
+            variants: product.variants.map((v) => ({
+              ...v,
+              price: v.price ? Number(v.price) : null
+            }))
           }}
         />
       </div>

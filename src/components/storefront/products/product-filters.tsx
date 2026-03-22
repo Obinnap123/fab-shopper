@@ -24,6 +24,7 @@ type Filters = {
   color: string[];
   minPrice: string;
   maxPrice: string;
+  search: string;
   style: string[];
   occasion: string[];
 };

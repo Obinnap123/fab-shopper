@@ -44,7 +44,7 @@ export function CategoryShowcase() {
 
   return (
     <section ref={sectionRef} className="bg-[var(--brand-cream)] py-24">
-      <div className="mx-auto w-full max-w-6xl px-6">
+      <div className="mx-auto w-full max-w-7xl px-8">
         <div className="text-center">
           <p className="text-[11px] uppercase tracking-[0.5em] text-[var(--brand-gold)]">
             Shop By Category
@@ -61,15 +61,19 @@ export function CategoryShowcase() {
           {categories.map((category, index) => (
             <motion.div
               key={category.name}
-              className="category-card group relative overflow-hidden"
-              whileHover={{ scale: 1.02 }}
-              transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="category-card group relative overflow-hidden cursor-pointer"
+              initial="rest"
+              whileHover="hover"
             >
               <div className={`relative w-full ${index % 2 === 0 ? "h-[380px]" : "h-[420px]"}`}>
+                {/* Image Scale on Hover */}
                 <motion.div
                   className="absolute inset-0"
-                  whileHover={{ scale: 1.08 }}
-                  transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  variants={{
+                    rest: { scale: 1 },
+                    hover: { scale: 1.07 }
+                  }}
+                  transition={{ duration: 0.8, ease: [0.33, 1, 0.68, 1] }}
                 >
                   <Image
                     src={category.image}
@@ -79,22 +83,67 @@ export function CategoryShowcase() {
                     sizes="(max-width: 768px) 100vw, 33vw"
                   />
                 </motion.div>
-                <div className="absolute inset-0 bg-gradient-to-t from-[rgba(10,25,15,0.85)] via-[rgba(10,25,15,0.2)] to-transparent" />
+                
+                {/* Gradient Overlay */}
                 <motion.div
-                  className="absolute bottom-0 left-0 right-0 p-6"
-                  whileHover={{ y: -4 }}
-                >
-                  <p
-                    className="text-[28px] text-white"
-                    style={{ fontFamily: "var(--font-display)", fontStyle: "italic" }}
+                  className="absolute inset-0 bg-gradient-to-t from-[rgba(10,25,15,0.9)] via-[rgba(10,25,15,0.1)] to-transparent"
+                  variants={{
+                    rest: { opacity: 0.7 },
+                    hover: { opacity: 1 }
+                  }}
+                  transition={{ duration: 0.5, ease: "easeInOut" }}
+                />
+
+                {/* Text contents */}
+                <div className="absolute bottom-0 left-0 right-0 p-8 flex flex-col justify-end">
+                  <motion.div
+                    variants={{
+                      rest: { y: 32 },
+                      hover: { y: 0 }
+                    }}
+                    transition={{ duration: 0.6, ease: [0.33, 1, 0.68, 1] }}
                   >
-                    {category.name}
-                  </p>
-                  <div className="mt-2 flex items-center justify-between text-[12px] uppercase tracking-[0.2em] text-[var(--brand-gold)]">
-                    <span>{category.count}</span>
-                    <span>→</span>
-                  </div>
-                </motion.div>
+                    <p
+                      className="text-[32px] text-white leading-none"
+                      style={{ fontFamily: "var(--font-display)", fontStyle: "italic" }}
+                    >
+                      {category.name}
+                    </p>
+                    
+                    {/* Expanding Line */}
+                    <motion.div 
+                      className="h-[1px] bg-[var(--brand-gold)] mt-4 mb-4 origin-left"
+                      variants={{
+                        rest: { scaleX: 0, opacity: 0 },
+                        hover: { scaleX: 1, opacity: 0.5 }
+                      }}
+                      transition={{ duration: 0.6, ease: [0.33, 1, 0.68, 1] }}
+                    />
+                    
+                    {/* Metadata (Count & Arrow) */}
+                    <motion.div 
+                      className="flex items-center justify-between text-[12px] uppercase tracking-[0.2em] text-[var(--brand-gold)]"
+                      variants={{
+                        rest: { opacity: 0, y: 10 },
+                        hover: { opacity: 1, y: 0 }
+                      }}
+                      transition={{ duration: 0.5, delay: 0.1, ease: [0.33, 1, 0.68, 1] }}
+                    >
+                      <span className="font-medium">{category.count}</span>
+                      <motion.div
+                        variants={{
+                          rest: { x: -10, opacity: 0 },
+                          hover: { x: 0, opacity: 1 }
+                        }}
+                        transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
+                      >
+                        <svg width="24" height="12" viewBox="0 0 24 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M18 1L23 6M23 6L18 11M23 6L1 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </motion.div>
+                    </motion.div>
+                  </motion.div>
+                </div>
               </div>
             </motion.div>
           ))}

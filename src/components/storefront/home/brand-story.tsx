@@ -44,7 +44,7 @@ export function BrandStory() {
 
   return (
     <section ref={sectionRef} className="bg-[var(--brand-cream)] py-28">
-      <div className="mx-auto grid w-full max-w-6xl items-center gap-20 px-6 md:grid-cols-2">
+      <div className="mx-auto grid w-full max-w-7xl items-center gap-20 px-8 md:grid-cols-2">
         <div className="story-image relative">
           <div className="absolute -left-6 -top-6 h-full w-full border border-[rgba(201,168,76,0.3)]" />
           <div className="relative overflow-hidden">

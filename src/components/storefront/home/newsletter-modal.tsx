@@ -13,22 +13,12 @@ export function NewsletterModal() {
 
   useEffect(() => {
     const hasCookie = document.cookie.includes(`${cookieKey}=true`);
+    // Honor the cookie fully, even locally, so it only pops up once.
     if (hasCookie) return;
 
-    const timer = setTimeout(() => setOpen(true), 4000);
+    const timer = setTimeout(() => setOpen(true), 3000); // exactly 3 seconds
 
-    const handleExitIntent = (event: MouseEvent) => {
-      if (event.clientY <= 10 && !open) {
-        setOpen(true);
-      }
-    };
-
-    window.addEventListener("mouseleave", handleExitIntent);
-
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("mouseleave", handleExitIntent);
-    };
+    return () => clearTimeout(timer);
   }, [open]);
 
   const closeModal = () => {
@@ -60,78 +50,102 @@ export function NewsletterModal() {
 
   return (
     <AnimatePresence>
-      {open ? (
+      {open && (
         <>
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-50"
-            style={{ background: "rgba(10, 25, 15, 0.85)" }}
+            transition={{ duration: 0.4 }}
+            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm"
             onClick={closeModal}
           />
+
+          {/* Modal Container */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.94, y: 20 }}
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.94, y: 20 }}
-            transition={{ duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
-            className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 pointer-events-none"
           >
-            <div
-              className="pointer-events-auto w-[90vw] max-w-[480px] rounded bg-[var(--brand-green)] p-8 text-center text-white shadow-2xl"
-              style={{ border: "1px solid rgba(201,168,76,0.4)" }}
-            >
+            <div className="pointer-events-auto relative flex w-full max-w-[850px] overflow-hidden bg-[var(--brand-cream)] shadow-2xl rounded-sm">
+              
+              {/* Close Button */}
               <button
                 onClick={closeModal}
-                className="ml-auto flex h-8 w-8 items-center justify-center rounded-full text-white/70 hover:text-white"
+                className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/5 text-black hover:bg-black/10 transition-colors"
+                aria-label="Close"
               >
                 <X className="h-4 w-4" />
               </button>
 
-              <p className="mt-2 text-[11px] uppercase tracking-[0.5em] text-[var(--brand-gold)]">
-                Join the Fab Family
-              </p>
-              <h3
-                className="mt-4 text-[42px] leading-[1.1] text-[var(--brand-gold)]"
-                style={{ fontFamily: "var(--font-display)", fontStyle: "italic" }}
-              >
-                Style Updates,
-                <br />
-                Delivered to You.
-              </h3>
-              <p className="mx-auto mt-4 max-w-[320px] text-sm text-white/70">
-                Be the first to know about new arrivals, exclusive deals, and style inspiration
-                straight from our Lagos boutique.
-              </p>
+              {/* Left Side: Elegant Image */}
+              <div 
+                className="hidden md:block md:w-[45%] lg:w-[50%] bg-cover bg-center"
+                style={{ 
+                  backgroundImage: 'url("https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1200&auto=format&fit=crop")',
+                  borderRight: "1px solid rgba(26,60,46,0.1)"
+                }}
+              />
 
-              {success ? (
-                <p className="mt-6 text-sm text-[var(--brand-gold)]">
-                  You&apos;re in! Welcome to the Fab Family.
+              {/* Right Side: Content & Form */}
+              <div className="flex w-full flex-col justify-center px-8 py-12 md:w-[55%] lg:w-[50%] md:px-12 bg-white">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--brand-gold)] mb-3 font-semibold">
+                  Unlock Exclusive Access
                 </p>
-              ) : (
-                <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-                  <input
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="Your email address"
-                    className="h-12 w-full rounded border border-[rgba(201,168,76,0.4)] bg-transparent px-4 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[var(--brand-gold)]"
-                  />
-                  <button
-                    type="submit"
-                    className="h-12 w-full rounded bg-[var(--brand-gold)] text-[13px] uppercase tracking-[0.12em] text-[var(--brand-green)]"
-                    style={{ fontFamily: "var(--font-body)", fontWeight: 600 }}
-                  >
-                    Subscribe
-                  </button>
-                </form>
-              )}
+                
+                <h3
+                  className="text-[36px] md:text-[42px] leading-[1.05] text-[var(--brand-green)]"
+                  style={{ fontFamily: "var(--font-display)", fontStyle: "italic" }}
+                >
+                  Join the <br/> Fab Family
+                </h3>
+                
+                <p className="mt-4 text-[14px] text-gray-500 leading-relaxed font-body">
+                  Subscribe for first access to our new collections, exclusive event invites, and style inspiration.
+                </p>
 
-              <p className="mt-4 text-[11px] text-white/40">No spam. Unsubscribe anytime.</p>
+                {success ? (
+                  <div className="mt-8 flex items-center justify-center rounded border border-[var(--brand-gold)] bg-[var(--brand-cream)] px-4 py-8 text-center text-[var(--brand-green)]">
+                    <p className="text-[14px] font-medium tracking-wide">
+                      Welcome to the family. Check your inbox for updates!
+                    </p>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
+                    <div className="relative">
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                        placeholder="Enter your email address"
+                        className="h-12 w-full border-b border-gray-300 bg-transparent px-2 text-[14px] text-[var(--brand-green)] transition-colors placeholder:text-gray-400 focus:border-[var(--brand-gold)] focus:outline-none"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="group relative mt-2 flex h-12 w-full items-center justify-center overflow-hidden bg-[var(--brand-green)] text-white"
+                    >
+                      <span className="relative z-10 text-[12px] uppercase tracking-[0.1em] font-medium transition-colors group-hover:text-[var(--brand-gold)]">
+                        Subscribe
+                      </span>
+                      <div className="absolute inset-0 z-0 h-full w-0 bg-[var(--brand-cream)] transition-all duration-300 ease-out group-hover:w-full border border-[var(--brand-green)]"></div>
+                    </button>
+                  </form>
+                )}
+
+                <p className="mt-6 text-[11px] text-gray-400">
+                  By subscribing, you agree to our Terms of Service and Privacy Policy. Unsubscribe anytime.
+                </p>
+              </div>
+
             </div>
           </motion.div>
         </>
-      ) : null}
+      )}
     </AnimatePresence>
   );
 }

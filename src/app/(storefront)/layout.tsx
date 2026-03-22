@@ -4,21 +4,28 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { AnnouncementBar } from "@/components/storefront/layout/announcement-bar";
+import { Navbar } from "@/components/storefront/layout/navbar";
 import { StorefrontFooter } from "@/components/storefront/layout/footer";
-import { StorefrontNavbar } from "@/components/storefront/layout/navbar";
 import { CartDrawer } from "@/components/storefront/checkout/cart-drawer";
+import { WhatsAppWidget } from "@/components/storefront/layout/whatsapp-widget";
 
 export default function StorefrontLayout({
-  children
+  children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
 
   return (
-    <div className="min-h-screen bg-[var(--brand-cream)] text-[var(--text-dark)]">
-      <AnnouncementBar />
-      <StorefrontNavbar />
+    <div className="relative min-h-screen w-full overflow-x-hidden bg-[var(--brand-cream)] text-[var(--text-dark)]">
+      {/* Announcement bar — fixed at very top */}
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 60 }}>
+        <AnnouncementBar />
+      </div>
+
+      {/* Navbar — fixed below announcement bar */}
+      <Navbar />
+
       <AnimatePresence mode="wait">
         <motion.main
           key={pathname}
@@ -32,6 +39,7 @@ export default function StorefrontLayout({
       </AnimatePresence>
       <StorefrontFooter />
       <CartDrawer />
+      <WhatsAppWidget />
     </div>
   );
 }

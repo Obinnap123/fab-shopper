@@ -36,6 +36,23 @@ const createProductSchema = z.object({
     .optional()
 });
 
+function serializeProduct(
+  product: Prisma.ProductGetPayload<{
+    include: { collections: true; variants: true };
+  }>
+) {
+  return {
+    ...product,
+    price: Number(product.price),
+    discountedPrice: product.discountedPrice !== null ? Number(product.discountedPrice) : null,
+    costPrice: product.costPrice !== null ? Number(product.costPrice) : null,
+    variants: product.variants.map((variant) => ({
+      ...variant,
+      price: variant.price !== null ? Number(variant.price) : null
+    }))
+  };
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limitParam = searchParams.get("limit");
@@ -93,18 +110,16 @@ export async function GET(request: Request) {
         ? { price: "desc" }
         : { createdAt: "desc" };
 
-  const [products, total] = await Promise.all([
-    prisma.product.findMany({
-      take: Number.isFinite(take) ? take : 20,
-      skip,
-      where,
-      include: { collections: true, variants: true },
-      orderBy
-    }),
-    prisma.product.count({ where })
-  ]);
+  const products = await prisma.product.findMany({
+    take: Number.isFinite(take) ? take : 20,
+    skip,
+    where,
+    include: { collections: true, variants: true },
+    orderBy
+  });
+  const total = await prisma.product.count({ where });
 
-  return NextResponse.json({ data: products, total });
+  return NextResponse.json({ data: products.map(serializeProduct), total });
 }
 
 export async function POST(request: Request) {
@@ -206,7 +221,17 @@ export async function POST(request: Request) {
       }
     });
 
-    return NextResponse.json({ data: product }, { status: 201 });
+    return NextResponse.json(
+      {
+        data: {
+          ...product,
+          price: Number(product.price),
+          discountedPrice: product.discountedPrice !== null ? Number(product.discountedPrice) : null,
+          costPrice: product.costPrice !== null ? Number(product.costPrice) : null
+        }
+      },
+      { status: 201 }
+    );
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to create product" },
