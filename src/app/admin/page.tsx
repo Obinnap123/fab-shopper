@@ -121,7 +121,7 @@ export default async function AdminDashboardPage() {
                 </div>
               </div>
 
-              <div className="mt-6 grid gap-4 md:grid-cols-4">
+              <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                 {[
                   {
                     label: "Orders",
@@ -165,7 +165,7 @@ export default async function AdminDashboardPage() {
                 ))}
               </div>
 
-              <div className="mt-6 grid gap-4 md:grid-cols-4">
+              <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 text-forest">
                 {[
                   { label: "Total Sales", value: formatCurrency(totalSales), icon: Coins },
                   { label: "Total Settled", value: formatCurrency(totalSales), icon: CreditCard },
@@ -212,7 +212,7 @@ export default async function AdminDashboardPage() {
 
             <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-[0_12px_30px_rgba(26,60,46,0.08)]">
               <h3 className="text-lg font-semibold text-forest">Recent Orders</h3>
-              <div className="mt-6 overflow-hidden rounded-2xl border border-forest/10">
+              <div className="mt-6 overflow-x-auto rounded-2xl border border-forest/10">
                 <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr_1fr] gap-4 border-b border-forest/5 bg-neutral-50 px-6 py-3 text-[10px] font-semibold uppercase tracking-[0.25em] text-forest/50">
                   <span>Order Number</span>
                   <span>Total</span>

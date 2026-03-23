@@ -5,6 +5,7 @@ import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -19,6 +20,33 @@ const categories = [
 
 export function CategoryShowcase() {
   const sectionRef = useRef<HTMLDivElement | null>(null);
+
+  const { data: dbCollections = [] } = useQuery({
+    queryKey: ["collections-showcase"],
+    queryFn: async () => {
+      const res = await fetch("/api/collections");
+      const json = await res.json();
+      return json.data || [];
+    }
+  });
+
+  const fallbackImages: Record<string, string> = {
+    "women's shoes": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800",
+    "bags & purses": "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800",
+    "clothing": "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=800",
+    "men's shoes": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800",
+    "perfumes": "https://images.unsplash.com/photo-1587017539504-67cfbddac569?w=800",
+    "accessories": "https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=800",
+    "new arrivals": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800"
+  };
+
+  const displayCollections = dbCollections.length > 0 
+    ? dbCollections.map((c: any) => ({
+        name: c.name,
+        count: `${c._count?.products || 0} Items`,
+        image: c.image || fallbackImages[c.name.toLowerCase()] || "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800"
+      }))
+    : categories;
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -40,7 +68,7 @@ export function CategoryShowcase() {
         }
       }
     );
-  }, []);
+  }, [displayCollections.length]);
 
   return (
     <section ref={sectionRef} className="bg-[var(--brand-cream)] py-24">
@@ -58,7 +86,7 @@ export function CategoryShowcase() {
         </div>
 
         <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {categories.map((category, index) => (
+          {displayCollections.map((category: any, index: number) => (
             <motion.div
               key={category.name}
               className="category-card group relative overflow-hidden cursor-pointer"

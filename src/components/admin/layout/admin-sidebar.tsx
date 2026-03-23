@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -16,8 +16,9 @@ import {
   UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getAdminRole } from "./admin-sidebar-action";
 
-const navSections = [
+const ALL_SECTIONS = [
   { title: "Dashboard", href: "/admin", icon: LayoutGrid },
   {
     title: "Products",
@@ -71,6 +72,20 @@ type AdminSidebarProps = {
 
 export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
   const pathname = usePathname();
+  const [role, setRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    getAdminRole().then(setRole);
+  }, []);
+
+  const navSections = useMemo(() => {
+    if (role === "STAFF") {
+      return ALL_SECTIONS.filter(
+        (s) => !["Analytics", "Finance", "Store Setup"].includes(s.title)
+      );
+    }
+    return ALL_SECTIONS;
+  }, [role]);
 
   const initialOpen = useMemo(() => {
     const open: Record<string, boolean> = {};
@@ -80,22 +95,26 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
       }
     });
     return open;
-  }, [pathname]);
+  }, [pathname, navSections]);
 
   const [openSections, setOpenSections] =
     useState<Record<string, boolean>>(initialOpen);
+
+  useEffect(() => {
+    setOpenSections(initialOpen);
+  }, [initialOpen]);
 
   const toggleSection = (title: string) => {
     setOpenSections((prev) => ({ ...prev, [title]: !prev[title] }));
   };
 
   return (
-    <aside className="flex h-full min-h-0 w-full max-w-[260px] flex-col border-r border-forest/15 bg-forest text-cream">
-      <div className="hidden px-6 py-6 md:block">
-        <p className="text-xs uppercase tracking-[0.4em] text-gold">
+    <aside className="flex h-full min-h-0 w-full max-w-[260px] flex-col bg-forest text-cream">
+      <div className="hidden px-4 py-8 sm:px-6 lg:px-10 lg:block">
+        <p className="text-[10px] uppercase tracking-[0.4em] text-gold/80">
           Fab Shopper
         </p>
-        <h2 className="mt-2 text-xl font-semibold">Admin</h2>
+        <h2 className="mt-2 text-2xl font-serif font-semibold text-cream">Admin</h2>
       </div>
       <nav className="flex-1 min-h-0 space-y-6 overflow-y-auto px-4 pb-10 pt-4 scrollbar-hide overscroll-contain md:pt-0">
         {navSections.map((section) => {

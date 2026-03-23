@@ -50,17 +50,17 @@ export function Navbar() {
     { label: "Shop", href: "/shop" },
     { label: "Collections", href: "#", hasDropdown: true },
     { label: "About", href: "/about" },
+    { label: "Contact", href: "/contact" },
   ]
 
-  const collections = [
-    { label: "New Arrivals", href: "/collections/new-arrivals" },
-    { label: "Women's Shoes", href: "/collections/womens-shoes" },
-    { label: "Men's Shoes", href: "/collections/mens-shoes" },
-    { label: "Bags & Purses", href: "/collections/bags" },
-    { label: "Clothing", href: "/collections/clothing" },
-    { label: "Perfumes", href: "/collections/perfumes" },
-    { label: "Accessories", href: "/collections/accessories" },
-  ]
+  const { data: collections = [] } = useQuery({
+    queryKey: ["collections-nav"],
+    queryFn: async () => {
+      const res = await fetch("/api/collections");
+      const json = await res.json();
+      return json.data || [];
+    }
+  });
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -154,7 +154,7 @@ export function Navbar() {
             </Link>
 
             {/* Navigation links - hidden on tablet/mobile (lg breakpoint) */}
-            <nav className="hidden lg:flex items-center gap-8">
+            <nav className="hidden xl:flex items-center gap-8">
               {navLinks.map((link) => (
                 <div
                   key={link.label}
@@ -190,13 +190,13 @@ export function Navbar() {
                           transition={{ duration: 0.2 }}
                           className="absolute left-0 top-[calc(100%+16px)] z-50 min-w-[220px] rounded bg-white py-2 shadow-[0_20px_40px_rgba(0,0,0,0.1)] border border-[rgba(26,60,46,0.1)]"
                         >
-                          {collections.map((col) => (
+                          {collections.map((col: any) => (
                             <Link
-                              key={col.href}
-                              href={col.href}
+                              key={col.slug}
+                              href={`/collections/${col.slug}`}
                               className="block px-6 py-2.5 font-body text-[13px] tracking-[0.04em] text-[var(--brand-green)] transition-colors hover:bg-[var(--brand-cream)] hover:text-[var(--brand-gold)]"
                             >
-                              {col.label}
+                              {col.name}
                             </Link>
                           ))}
                         </motion.div>
@@ -209,11 +209,11 @@ export function Navbar() {
           </div>
 
           {/* RIGHT: Action items (Search, User, Wishlist, Cart) */}
-          <div className="flex items-center gap-4 lg:gap-6">
+          <div className="flex items-center gap-4 xl:gap-6">
             {/* Search Bar (Desktop - lg instead of md) */}
             <form 
               onSubmit={handleSearchSubmit}
-              className="hidden lg:flex items-center gap-2 rounded-full border px-4 py-1.5 transition-colors"
+              className="hidden xl:flex items-center gap-2 rounded-full border px-4 py-1.5 transition-colors"
               style={{
                 borderColor: isTransparent && !searchOpen ? "rgba(255,255,255,0.3)" : "rgba(26,60,46,0.2)",
                 background: isTransparent && !searchOpen ? "rgba(255,255,255,0.1)" : "rgba(26,60,46,0.03)"
@@ -233,7 +233,7 @@ export function Navbar() {
 
             {/* Search Icon (Mobile/Tablet) */}
             <button 
-              className="lg:hidden hover:text-[var(--brand-gold)] transition-colors" 
+              className="xl:hidden hover:text-[var(--brand-gold)] transition-colors" 
               onClick={() => setSearchOpen(!searchOpen)}
               aria-label="Search"
             >
@@ -241,12 +241,12 @@ export function Navbar() {
             </button>
 
             {/* User Account */}
-            <Link href="/login" className="hidden lg:flex hover:text-[var(--brand-gold)] transition-colors" aria-label="Account">
+            <Link href="/login" className="hidden xl:flex hover:text-[var(--brand-gold)] transition-colors" aria-label="Account">
               <User className="w-[18px] h-[18px]" strokeWidth={1.25} />
             </Link>
 
             {/* Wishlist */}
-            <Link href="/wishlist" className="hidden lg:flex hover:text-[var(--brand-gold)] transition-colors relative" aria-label="Wishlist">
+            <Link href="/wishlist" className="hidden xl:flex hover:text-[var(--brand-gold)] transition-colors relative" aria-label="Wishlist">
               <Heart className="w-[18px] h-[18px]" strokeWidth={1.25} />
               <span className="absolute -top-1.5 -right-1.5 flex h-[15px] w-[15px] items-center justify-center rounded-full bg-black text-[8px] font-bold text-white shadow-sm">
                 {isMounted ? wishlistCount : 0}
@@ -263,7 +263,7 @@ export function Navbar() {
 
             {/* Mobile menu toggle */}
             <button
-              className="lg:hidden hover:text-[var(--brand-gold)] transition-colors z-[110]"
+              className="xl:hidden hover:text-[var(--brand-gold)] transition-colors z-[110]"
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Menu"
             >
@@ -294,7 +294,7 @@ export function Navbar() {
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="lg:hidden overflow-hidden bg-white border-t border-[rgba(26,60,46,0.1)] relative z-50"
+              className="xl:hidden overflow-hidden bg-white border-t border-[rgba(26,60,46,0.1)] relative z-50"
             >
               <div className="px-5 py-4">
                 <form 
@@ -399,27 +399,17 @@ export function Navbar() {
                 animate="show"
                 className="flex flex-col py-6 px-8 gap-6"
               >
-                {[
-                  { label: "Home", href: "/" },
-                  { label: "Shop", href: "/shop" },
-                  { label: "New Arrivals", href: "/collections/new-arrivals" },
-                  { label: "Women's Shoes", href: "/collections/womens-shoes" },
-                  { label: "Men's Shoes", href: "/collections/mens-shoes" },
-                  { label: "Bags & Purses", href: "/collections/bags" },
-                  { label: "Clothing", href: "/collections/clothing" },
-                  { label: "Accessories", href: "/collections/accessories" },
-                  { label: "About", href: "/about" },
-                ].map((link) => (
-                  <motion.div variants={menuItemAttrs} key={link.label}>
-                    <Link
-                      href={link.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block font-body text-[16px] uppercase tracking-[0.08em] text-[var(--brand-green)] hover:text-[var(--brand-gold)] transition-colors"
-                    >
-                      {link.label}
+                <motion.div variants={menuItemAttrs} key="home"><Link href="/" onClick={() => setMobileMenuOpen(false)} className="block font-body text-[16px] uppercase tracking-[0.08em] text-[var(--brand-green)] hover:text-[var(--brand-gold)] transition-colors">Home</Link></motion.div>
+                <motion.div variants={menuItemAttrs} key="shop"><Link href="/shop" onClick={() => setMobileMenuOpen(false)} className="block font-body text-[16px] uppercase tracking-[0.08em] text-[var(--brand-green)] hover:text-[var(--brand-gold)] transition-colors">Shop</Link></motion.div>
+                {collections.map((col: any) => (
+                  <motion.div variants={menuItemAttrs} key={col.slug}>
+                    <Link href={`/collections/${col.slug}`} onClick={() => setMobileMenuOpen(false)} className="block font-body text-[16px] uppercase tracking-[0.08em] text-[var(--brand-green)] hover:text-[var(--brand-gold)] transition-colors">
+                      {col.name}
                     </Link>
                   </motion.div>
                 ))}
+                <motion.div variants={menuItemAttrs} key="about"><Link href="/about" onClick={() => setMobileMenuOpen(false)} className="block font-body text-[16px] uppercase tracking-[0.08em] text-[var(--brand-green)] hover:text-[var(--brand-gold)] transition-colors">About</Link></motion.div>
+                <motion.div variants={menuItemAttrs} key="contact"><Link href="/contact" onClick={() => setMobileMenuOpen(false)} className="block font-body text-[16px] uppercase tracking-[0.08em] text-[var(--brand-green)] hover:text-[var(--brand-gold)] transition-colors">Contact</Link></motion.div>
               </motion.div>
               
               <div className="mt-auto p-8 bg-[rgba(26,60,46,0.03)] border-t border-[rgba(26,60,46,0.1)]">

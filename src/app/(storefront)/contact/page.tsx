@@ -47,7 +47,7 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-semibold text-[var(--brand-green)] mb-1">Phone Number</h3>
                     <p className="text-[var(--brand-green)]/70 text-sm leading-relaxed">
-                      +234 905 261 3150 <br />
+                      <a href="tel:+2349052613150" className="hover:text-[var(--brand-gold)] transition-colors">+234 905 261 3150</a> <br />
                       <span className="text-xs opacity-70">(Calls and WhatsApp)</span>
                     </p>
                   </div>
@@ -60,7 +60,7 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-semibold text-[var(--brand-green)] mb-1">Email</h3>
                     <p className="text-[var(--brand-green)]/70 text-sm leading-relaxed">
-                      hello@fabshopper.com
+                      <a href="mailto:delightclosetrevolution@gmail.com" className="hover:text-[var(--brand-gold)] transition-colors">delightclosetrevolution@gmail.com</a>
                     </p>
                   </div>
                 </div>

@@ -135,35 +135,37 @@ export function ShippingClient() {
         />
 
         <SectionCard title="Shipping Zones" subtitle="Pre-populated Nigerian zones">
-          <div className="overflow-hidden rounded-2xl border border-forest/10">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-neutral-50">
-                  <TableHead className="py-4">Date</TableHead>
-                  <TableHead className="py-4">Location Name</TableHead>
-                  <TableHead className="py-4">Description</TableHead>
-                  <TableHead className="py-4">Shipping Fee</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {methods.length ? (
-                  methods.map((method) => (
-                    <TableRow key={method.id}>
-                      <TableCell className="py-4">{new Date(method.createdAt).toLocaleDateString("en-NG")}</TableCell>
-                      <TableCell className="py-4 font-semibold text-forest">{method.locationName}</TableCell>
-                      <TableCell className="py-4">{method.description ?? "—"}</TableCell>
-                      <TableCell className="py-4">{method.isFree ? "Free" : formatCurrency(Number(method.fee))}</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="py-8 text-center text-sm text-forest/60">
-                      No shipping methods yet.
-                    </TableCell>
+          <div className="overflow-x-auto rounded-2xl border border-forest/10">
+            <div className="min-w-[600px]">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-neutral-50">
+                    <TableHead className="py-4">Date</TableHead>
+                    <TableHead className="py-4">Location Name</TableHead>
+                    <TableHead className="py-4">Description</TableHead>
+                    <TableHead className="py-4">Shipping Fee</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {methods.length ? (
+                    methods.map((method) => (
+                      <TableRow key={method.id}>
+                        <TableCell className="py-4">{new Date(method.createdAt).toLocaleDateString("en-NG")}</TableCell>
+                        <TableCell className="py-4 font-semibold text-forest">{method.locationName}</TableCell>
+                        <TableCell className="py-4">{method.description ?? "—"}</TableCell>
+                        <TableCell className="py-4">{method.isFree ? "Free" : formatCurrency(Number(method.fee))}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="py-8 text-center text-sm text-forest/60">
+                        No shipping methods yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </SectionCard>
 

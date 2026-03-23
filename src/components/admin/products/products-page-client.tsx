@@ -45,7 +45,7 @@ export function ProductsPageClient() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
             label: "Total Retail Value",
@@ -114,7 +114,7 @@ export function ProductsPageClient() {
         </button>
       </div>
 
-      <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-[0_12px_30px_rgba(26,60,46,0.08)]">
+      <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-[0_12px_30px_rgba(26,60,46,0.08)] overflow-x-auto min-w-0">
         {activeTab === "products" ? <ProductsClient /> : <CollectionsClient />}
       </div>
     </section>

@@ -8,6 +8,8 @@ const cookieKey = "fab_newsletter";
 
 export function NewsletterModal() {
   const [open, setOpen] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [success, setSuccess] = useState(false);
 
@@ -35,7 +37,7 @@ export function NewsletterModal() {
     const response = await fetch("/api/newsletter/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email })
+      body: JSON.stringify({ email, firstName, lastName })
     });
 
     if (response.ok) {
@@ -104,7 +106,7 @@ export function NewsletterModal() {
                 </h3>
                 
                 <p className="mt-4 text-[14px] text-gray-500 leading-relaxed font-body">
-                  Subscribe for first access to our new collections, exclusive event invites, and style inspiration.
+                  Enjoy free delivery within Lagos on orders above ₦300,000! Subscribe for first access to our new collections, exclusive event invites, and style inspiration.
                 </p>
 
                 {success ? (
@@ -114,7 +116,25 @@ export function NewsletterModal() {
                     </p>
                   </div>
                 ) : (
-                  <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
+                  <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+                    <div className="flex flex-col md:flex-row gap-4">
+                      <input
+                        type="text"
+                        required
+                        value={firstName}
+                        onChange={(event) => setFirstName(event.target.value)}
+                        placeholder="First Name"
+                        className="h-12 w-full border-b border-gray-300 bg-transparent px-2 text-[14px] text-[var(--brand-green)] transition-colors placeholder:text-gray-400 focus:border-[var(--brand-gold)] focus:outline-none"
+                      />
+                      <input
+                        type="text"
+                        required
+                        value={lastName}
+                        onChange={(event) => setLastName(event.target.value)}
+                        placeholder="Last Name"
+                        className="h-12 w-full border-b border-gray-300 bg-transparent px-2 text-[14px] text-[var(--brand-green)] transition-colors placeholder:text-gray-400 focus:border-[var(--brand-gold)] focus:outline-none"
+                      />
+                    </div>
                     <div className="relative">
                       <input
                         type="email"

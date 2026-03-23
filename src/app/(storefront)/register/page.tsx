@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { PageSpacer } from "@/components/storefront/layout/page-spacer";
 
 const registerSchema = z.object({
@@ -28,7 +29,6 @@ function RegisterForm() {
   });
 
   const onSubmit = async (values: z.infer<typeof registerSchema>) => {
-    setError(null);
     try {
       const res = await fetch("/api/customer-auth/register", {
         method: "POST",
@@ -38,11 +38,12 @@ function RegisterForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Registration failed");
       
+      toast.success("Account created! Welcome to Fab Shopper.");
       const redirect = redirectParams || "/";
       router.push(redirect);
       router.refresh();
     } catch (err: any) {
-      setError(err.message);
+      toast.error(err.message || "Failed to register. Please try again.");
     }
   };
 
@@ -52,12 +53,6 @@ function RegisterForm() {
         <h1 className="text-3xl font-display italic text-[var(--brand-green)] mb-2">Create Account</h1>
         <p className="text-sm text-[var(--brand-green)]/60">Join the Fab Shopper community today.</p>
       </div>
-
-      {error ? (
-        <div className="mb-6 rounded-2xl bg-rose-50 p-4 text-sm text-rose-600 border border-rose-100">
-          {error}
-        </div>
-      ) : null}
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
         <div className="grid grid-cols-2 gap-4">

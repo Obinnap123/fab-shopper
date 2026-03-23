@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { PageSpacer } from "@/components/storefront/layout/page-spacer";
 
 const loginSchema = z.object({
@@ -26,7 +27,6 @@ function LoginForm() {
   });
 
   const onSubmit = async (values: z.infer<typeof loginSchema>) => {
-    setError(null);
     try {
       const res = await fetch("/api/customer-auth/login", {
         method: "POST",
@@ -36,11 +36,12 @@ function LoginForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
       
+      toast.success("Welcome back to Fab Shopper!");
       const redirect = redirectParams || "/";
       router.push(redirect);
       router.refresh();
     } catch (err: any) {
-      setError(err.message);
+      toast.error(err.message || "Invalid credentials. Please try again.");
     }
   };
 
@@ -50,12 +51,6 @@ function LoginForm() {
         <h1 className="text-3xl font-display italic text-[var(--brand-green)] mb-2">Welcome Back</h1>
         <p className="text-sm text-[var(--brand-green)]/60">Enter your details to access your account.</p>
       </div>
-
-      {error ? (
-        <div className="mb-6 rounded-2xl bg-rose-50 p-4 text-sm text-rose-600 border border-rose-100">
-          {error}
-        </div>
-      ) : null}
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-2">

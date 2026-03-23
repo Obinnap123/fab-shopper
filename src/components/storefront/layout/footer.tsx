@@ -105,7 +105,7 @@ export function StorefrontFooter() {
           <ul className="mt-4 space-y-3 text-sm text-white/60">
             <li>Shop A23, Justice Mall, Nnobi Lane, SPG Bus Stop, Lekki, Lagos</li>
             <li>Store line (call only): +234 905 261 3150</li>
-            <li>@fab_shopper2</li>
+            <li>delightclosetrevolution@gmail.com</li>
           </ul>
         </div>
       </div>

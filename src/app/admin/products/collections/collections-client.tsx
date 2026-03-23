@@ -1,32 +1,23 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { ImageIcon, Pencil, Save, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-export function CollectionsClient() {
-  const [collections, setCollections] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+export function CollectionsClient({ initialCollections }: { initialCollections: any[] }) {
+  const [collections, setCollections] = useState(initialCollections);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [isUploading, setIsUploading] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // For creating a new collection
   const [newName, setNewName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/collections")
-      .then(res => res.json())
-      .then(json => {
-         setCollections(json.data || []);
-         setIsLoading(false);
-      })
-      .catch(() => setIsLoading(false));
-  }, []);
-
+  // Rename Actions
   const handleStartRename = (col: any) => {
     setEditingId(col.id);
     setEditName(col.name);
@@ -56,6 +47,7 @@ export function CollectionsClient() {
     }
   };
 
+  // Image Upload Action
   const handleFileClick = (id: string) => {
     if (fileInputRef.current) {
       fileInputRef.current.setAttribute("data-collection-id", id);
@@ -70,6 +62,7 @@ export function CollectionsClient() {
 
     setIsUploading(colId);
     
+    // 1. Upload to Cloudinary via existing route
     const formData = new FormData();
     formData.append("file", file);
 
@@ -82,6 +75,7 @@ export function CollectionsClient() {
       if (!uploadRes.ok) throw new Error("Upload failed");
       const { url } = await uploadRes.json();
 
+      // 2. Patch Collection with new Image URL
       const patchRes = await fetch(`/api/collections/${colId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -101,6 +95,7 @@ export function CollectionsClient() {
     }
   };
 
+  // Create Collection Action
   const handleCreateCollection = async () => {
     if (!newName.trim()) return;
     setIsCreating(true);
@@ -125,12 +120,9 @@ export function CollectionsClient() {
     }
   };
 
-  if (isLoading) {
-    return <div className="py-10 text-center text-sm tracking-widest uppercase text-forest/50">Loading Collections...</div>;
-  }
-
   return (
     <>
+      {/* Hidden Global File Input */}
       <input 
         type="file" 
         ref={fileInputRef} 
@@ -143,6 +135,8 @@ export function CollectionsClient() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {collections.map((collection) => (
             <div key={collection.id} className="rounded-2xl border border-forest/10 overflow-hidden bg-white shadow-sm flex flex-col">
+              
+              {/* Cover Image Area */}
               <div 
                 className="h-40 w-full bg-forest/5 relative group cursor-pointer border-b border-forest/10 flex items-center justify-center"
                 onClick={() => handleFileClick(collection.id)}
@@ -156,6 +150,7 @@ export function CollectionsClient() {
                   </div>
                 )}
 
+                {/* Hover overlay for upload instructions */}
                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                   {isUploading === collection.id ? (
                     <Loader2 className="w-8 h-8 animate-spin text-white" />
@@ -167,6 +162,7 @@ export function CollectionsClient() {
                 </div>
               </div>
 
+              {/* Text & Actions Details */}
               <div className="p-5 flex-1 flex flex-col">
                 {editingId === collection.id ? (
                   <div className="flex items-center gap-2 w-full mb-2">
@@ -196,6 +192,7 @@ export function CollectionsClient() {
                    <p>{collection._count?.products || 0} products</p>
                 </div>
               </div>
+
             </div>
           ))}
         </div>
