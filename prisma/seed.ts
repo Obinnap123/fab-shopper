@@ -24,20 +24,20 @@ async function main() {
   }
 
   console.log("Seeding Super Admin...");
-  const adminEmail = "admin@fabshopper.com";
+  const adminEmail = "delightclosetrevolution@gmail.com";
   const exists = await prisma.admin.findUnique({ where: { email: adminEmail } });
   
   if (!exists) {
-    const hashedPassword = await bcrypt.hash("password123", 12);
+    const hashedPassword = await bcrypt.hash("DelightAdmin2026!", 12);
     await prisma.admin.create({
       data: {
         email: adminEmail,
         password: hashedPassword,
-        name: "Super Admin",
+        name: "Delight Closet",
         role: "SUPER_ADMIN"
       }
     });
-    console.log("Created Super Admin: admin@fabshopper.com / password123");
+    console.log("Created Super Admin: delightclosetrevolution@gmail.com / DelightAdmin2026!");
   } else {
     await prisma.admin.update({
       where: { email: adminEmail },

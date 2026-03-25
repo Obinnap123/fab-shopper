@@ -10,18 +10,22 @@ import {
   YAxis
 } from "recharts";
 
-const data = [
-  { month: "Jan", online: 420000, offline: 180000 },
-  { month: "Feb", online: 520000, offline: 240000 },
-  { month: "Mar", online: 610000, offline: 310000 },
-  { month: "Apr", online: 480000, offline: 260000 },
-  { month: "May", online: 720000, offline: 330000 },
-  { month: "Jun", online: 680000, offline: 290000 }
-];
+type ChartData = {
+  month: string;
+  online: number;
+  offline: number;
+};
 
 const currency = (value: number) => `${"\u20A6"}${value / 1000}k`;
 
-export function SalesChart() {
+export function SalesChart({ data = [
+  { month: "Jan", online: 0, offline: 0 },
+  { month: "Feb", online: 0, offline: 0 },
+  { month: "Mar", online: 0, offline: 0 },
+  { month: "Apr", online: 0, offline: 0 },
+  { month: "May", online: 0, offline: 0 },
+  { month: "Jun", online: 0, offline: 0 }
+] }: { data?: ChartData[] }) {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>

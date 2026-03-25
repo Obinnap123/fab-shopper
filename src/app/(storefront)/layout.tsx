@@ -8,6 +8,7 @@ import { Navbar } from "@/components/storefront/layout/navbar";
 import { StorefrontFooter } from "@/components/storefront/layout/footer";
 import { CartDrawer } from "@/components/storefront/checkout/cart-drawer";
 import { WhatsAppWidget } from "@/components/storefront/layout/whatsapp-widget";
+import { StoreAnalyticsTracker } from "@/components/storefront/layout/store-analytics-tracker";
 
 export default function StorefrontLayout({
   children,
@@ -40,6 +41,7 @@ export default function StorefrontLayout({
       <StorefrontFooter />
       <CartDrawer />
       <WhatsAppWidget />
+      <StoreAnalyticsTracker />
     </div>
   );
 }

@@ -61,6 +61,17 @@ export async function POST(request: Request) {
       }
     });
 
+    // Generate Notification for the Admin Dashboard
+    // Typecast to any locally to suppress TS error since Prisma lock prevented local type generation
+    await (prisma as any).notification.create({
+      data: {
+        title: `You have a New Order #${orderNumber.split('-').pop()}`,
+        message: `${session.firstName} ${session.lastName} purchased ${items.length} items worth ₦${total.toLocaleString()} from your website.`,
+        type: "ORDER",
+        link: `/admin/orders?id=${order.id}`
+      }
+    });
+
     // Initialize Paystack
     const paystackResponse = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",

@@ -16,6 +16,8 @@ import { SalesChart } from "@/components/admin/dashboard/sales-chart";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { prisma } from "@/lib/prisma";
+import { cookies } from "next/headers";
+import { adminCookieName, verifyAdminToken } from "@/lib/auth";
 
 export const dynamic = "force-dynamic"; // Ensure dashboard shows live data
 
@@ -46,6 +48,7 @@ export default async function AdminDashboardPage() {
     totalOrders,
     productsSoldAgg,
     customersCount,
+    storeVisitCount,
     salesAgg,
     recentOrders,
     owedAgg
@@ -56,6 +59,8 @@ export default async function AdminDashboardPage() {
       where: { order: { status: "COMPLETED" } }
     }),
     prisma.customer.count(),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (prisma as any).storeVisit.count(),
     prisma.order.aggregate({
       _sum: { total: true },
       where: { paymentStatus: "PAID" }
@@ -74,7 +79,18 @@ export default async function AdminDashboardPage() {
   const totalSales = Number(salesAgg._sum.total ?? 0);
   const productsSold = Number(productsSoldAgg._sum.quantity ?? 0);
   const amountOwed = Number(owedAgg._sum.total ?? 0);
+  const websiteVisits = storeVisitCount;
   const greeting = getGreeting();
+  
+  let adminName = "Admin";
+  const cookieStore = await cookies();
+  const token = cookieStore.get(adminCookieName)?.value;
+  if (token) {
+    try {
+      const payload = await verifyAdminToken(token);
+      if (payload?.name) adminName = payload.name;
+    } catch(e) {}
+  }
 
   return (
     <AdminShell>
@@ -82,7 +98,7 @@ export default async function AdminDashboardPage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-gold">Dashboard</p>
-            <h1 className="text-2xl font-semibold text-forest">{greeting}, Zikora</h1>
+            <h1 className="text-2xl font-semibold text-forest">{greeting}, {adminName}</h1>
             <p className="text-sm text-forest/60">
               Share your storefront link today.
               <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-forest/5 px-3 py-1 text-forest/80">
@@ -143,7 +159,7 @@ export default async function AdminDashboardPage() {
                   },
                   {
                     label: "Website Visits",
-                    value: "2,042",
+                    value: websiteVisits,
                     icon: ChartNoAxesColumn,
                     tone: "bg-rose-50 text-rose-600"
                   }
@@ -234,7 +250,8 @@ export default async function AdminDashboardPage() {
                   </div>
                 ) : (
                   <div className="divide-y divide-forest/5">
-                    {recentOrders.map((order) => (
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                    {recentOrders.map((order: any) => (
                       <Link
                         key={order.id}
                         href={`/admin/orders?id=${order.id}`}

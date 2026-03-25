@@ -48,6 +48,7 @@ const ALL_SECTIONS = [
     icon: Truck,
     href: "/admin/shipping",
     items: [
+      { label: "My Profile", href: "/admin/store/profile" },
       { label: "Staff Accounts", href: "/admin/staff" },
       { label: "Store Location", href: "/admin/store/location" },
       { label: "General Settings", href: "/admin/store/general-settings" }

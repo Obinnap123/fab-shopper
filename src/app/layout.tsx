@@ -2,6 +2,9 @@ import "./globals.css";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { AppProviders } from "@/components/providers/app-providers";
+import NextTopLoader from "nextjs-toploader";
+import { prisma } from "@/lib/prisma";
+import Script from "next/script";
 
 const sans = localFont({
   variable: "--font-body",
@@ -34,14 +37,47 @@ export const metadata: Metadata = {
   description: "Luxury Lagos womenswear and accessories."
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: {
   children: React.ReactNode;
 }) {
+  let snapPixelId = null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const settings = await (prisma as any).storeSettings.findFirst();
+    snapPixelId = settings?.snapPixelId;
+  } catch (e) {}
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${sans.variable} ${serif.variable} antialiased`}>
+        {snapPixelId && (
+          <Script id="snap-pixel" strategy="afterInteractive">
+            {`
+              (function(e,t,n){if(e.snaptr)return;var a=e.snaptr=function()
+              {a.handleRequest?a.handleRequest.apply(a,arguments):a.queue.push(arguments)};
+              a.queue=[];var s='script';r=t.createElement(s);r.async=!0;
+              r.src=n;var u=t.getElementsByTagName(s)[0];
+              u.parentNode.insertBefore(r,u);})(window,document,
+              'https://sc-static.net/scevent.min.js');
+              
+              snaptr('init', '${snapPixelId}');
+              snaptr('track', 'PAGE_VIEW');
+            `}
+          </Script>
+        )}
+        <NextTopLoader
+          color="var(--brand-gold)"
+          initialPosition={0.08}
+          crawlSpeed={200}
+          height={3}
+          crawl={true}
+          showSpinner={false}
+          easing="ease"
+          speed={200}
+          shadow="0 0 10px var(--brand-gold),0 0 5px var(--brand-gold)"
+        />
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

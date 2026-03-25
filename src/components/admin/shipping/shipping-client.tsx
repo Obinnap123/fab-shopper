@@ -140,20 +140,20 @@ export function ShippingClient() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-neutral-50">
-                    <TableHead className="py-4">Date</TableHead>
-                    <TableHead className="py-4">Location Name</TableHead>
-                    <TableHead className="py-4">Description</TableHead>
-                    <TableHead className="py-4">Shipping Fee</TableHead>
+                    <TableHead className="py-4 px-6">Date</TableHead>
+                    <TableHead className="py-4 px-6">Location Name</TableHead>
+                    <TableHead className="py-4 px-6">Description</TableHead>
+                    <TableHead className="py-4 px-6">Shipping Fee</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {methods.length ? (
                     methods.map((method) => (
                       <TableRow key={method.id}>
-                        <TableCell className="py-4">{new Date(method.createdAt).toLocaleDateString("en-NG")}</TableCell>
-                        <TableCell className="py-4 font-semibold text-forest">{method.locationName}</TableCell>
-                        <TableCell className="py-4">{method.description ?? "—"}</TableCell>
-                        <TableCell className="py-4">{method.isFree ? "Free" : formatCurrency(Number(method.fee))}</TableCell>
+                        <TableCell className="py-4 px-6">{new Date(method.createdAt).toLocaleDateString("en-NG")}</TableCell>
+                        <TableCell className="py-4 px-6 font-semibold text-forest">{method.locationName}</TableCell>
+                        <TableCell className="py-4 px-6">{method.description ?? "—"}</TableCell>
+                        <TableCell className="py-4 px-6">{method.isFree ? "Free" : formatCurrency(Number(method.fee))}</TableCell>
                       </TableRow>
                     ))
                   ) : (

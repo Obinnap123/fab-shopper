@@ -112,7 +112,10 @@ export function StorefrontFooter() {
 
       <div className="border-t border-[rgba(201,168,76,0.1)]">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-6 text-xs text-white/50">
-          <span>© 2025 Fab Shopper. All rights reserved.</span>
+          <span>
+            © 2025 Fab Shopper. All rights reserved.
+            <Link href="/admin/login" className="ml-4 font-medium opacity-40 hover:opacity-100 transition-opacity">Staff Login</Link>
+          </span>
           <span className="rounded-full border border-[rgba(201,168,76,0.4)] px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-[var(--brand-gold)] flex items-center gap-2">
             Secured by Paystack
           </span>

@@ -1,0 +1,14 @@
+[
+  {
+    "email": "clintonp382@gmail.com",
+    "role": "STAFF",
+    "hashedPassword": "$2a$12$FCnZE5S1lbfAgxHX26uWZO.OQU5GdqMrMGWwyTcvhPUUVsZXVXu7O",
+    "password123Matches": false
+  },
+  {
+    "email": "admin@fabshopper.com",
+    "role": "SUPER_ADMIN",
+    "hashedPassword": "$2a$12$XpOu9ekGGGoZEv7V9Xad6OhOzmrzQsiJ/cWMQ2u89jJ8.s5DsiI0O",
+    "password123Matches": false
+  }
+]

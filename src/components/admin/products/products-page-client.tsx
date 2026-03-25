@@ -15,8 +15,22 @@ import {
   SelectValue
 } from "@/components/ui/select";
 
-export function ProductsPageClient() {
+type ProductStats = {
+  totalRetailValue: number;
+  totalInventoryValue: number;
+  productsSold: number;
+  outOfStock: number;
+};
+
+export function ProductsPageClient({ stats = {
+  totalRetailValue: 0,
+  totalInventoryValue: 0,
+  productsSold: 0,
+  outOfStock: 0
+} }: { stats?: ProductStats }) {
   const [activeTab, setActiveTab] = useState("products");
+
+  const formatCurrency = (val: number) => `₦${val.toLocaleString("en-NG", { minimumFractionDigits: 2 })}`;
 
   return (
     <section className="space-y-6">
@@ -49,25 +63,25 @@ export function ProductsPageClient() {
         {[
           {
             label: "Total Retail Value",
-            value: "₦113,845,000.00",
+            value: formatCurrency(stats.totalRetailValue),
             icon: Wallet,
             tone: "bg-emerald-50 text-emerald-600"
           },
           {
-            label: "Total Inventory Value",
-            value: "₦0.00",
+            label: "Total Cost Value",
+            value: formatCurrency(stats.totalInventoryValue),
             icon: Box,
             tone: "bg-sky-50 text-sky-600"
           },
           {
             label: "Products Sold",
-            value: "0",
+            value: stats.productsSold.toString(),
             icon: Tag,
             tone: "bg-rose-50 text-rose-600"
           },
           {
             label: "Out of Stock",
-            value: "0",
+            value: stats.outOfStock.toString(),
             icon: Package,
             tone: "bg-amber-50 text-amber-600"
           }
