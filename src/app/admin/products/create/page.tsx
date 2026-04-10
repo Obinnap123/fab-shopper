@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState } from "react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
@@ -56,9 +56,11 @@ function FieldError({ message }: { message?: string }) {
   return <p className="text-xs text-rose-500">{message}</p>;
 }
 
-const toNumberOrUndefined = (value?: string) => {
+const parseNumberish = (value?: string) => {
   if (!value) return undefined;
-  const num = Number(value);
+  const normalized = value.replace(/[^\d.-]/g, "").trim();
+  if (!normalized) return undefined;
+  const num = Number(normalized);
   return Number.isFinite(num) ? num : undefined;
 };
 
@@ -156,16 +158,24 @@ export default function CreateProductPage() {
 
   const onSubmit = form.handleSubmit(async (values) => {
     setErrorMessage(null);
+    const parsedPrice = parseNumberish(values.price);
+    const parsedStock = parseNumberish(values.stockQuantity);
+
+    if (parsedPrice === undefined || parsedStock === undefined) {
+      setErrorMessage("Please enter valid numeric values for price and stock quantity.");
+      return;
+    }
+
     const payload = {
       name: values.name,
       slug: values.slug || undefined,
       shortDescription: values.shortDescription || undefined,
       longDescription: values.longDescription || undefined,
       productType: values.productType,
-      price: Number(values.price),
-      costPrice: toNumberOrUndefined(values.costPrice),
-      discountedPrice: toNumberOrUndefined(values.discountedPrice),
-      stockQuantity: Number(values.stockQuantity),
+      price: parsedPrice,
+      costPrice: parseNumberish(values.costPrice),
+      discountedPrice: parseNumberish(values.discountedPrice),
+      stockQuantity: parsedStock,
       unit: values.unit || undefined,
       barcode: values.barcode || undefined,
       status: values.status,
@@ -179,8 +189,8 @@ export default function CreateProductPage() {
               color: variant.color || undefined,
               material: variant.material || undefined,
               fitType: variant.fitType || undefined,
-              stockQuantity: Number(variant.stockQuantity),
-              price: toNumberOrUndefined(variant.price)
+              stockQuantity: parseNumberish(variant.stockQuantity) ?? 0,
+              price: parseNumberish(variant.price)
             }))
           : []
     };
@@ -192,9 +202,22 @@ export default function CreateProductPage() {
     });
 
     if (!response.ok) {
-      const payload = await response.json().catch(() => null);
-      const fallback = await response.text().catch(() => "");
-      setErrorMessage(payload?.error ?? fallback ?? "Failed to create product");
+      const raw = await response.text().catch(() => "");
+      let payload: { error?: string; issues?: { fieldErrors?: Record<string, string[]> } } | null = null;
+      try {
+        payload = raw ? JSON.parse(raw) : null;
+      } catch {
+        payload = null;
+      }
+
+      const fieldIssues = payload?.issues?.fieldErrors
+        ? Object.entries(payload.issues.fieldErrors)
+            .filter(([, messages]) => messages?.length)
+            .map(([field, messages]) => `${field}: ${messages?.join(", ")}`)
+            .join(" | ")
+        : "";
+
+      setErrorMessage(payload?.error ? `${payload.error}${fieldIssues ? ` (${fieldIssues})` : ""}` : raw || "Failed to create product");
       return;
     }
 
@@ -360,20 +383,20 @@ export default function CreateProductPage() {
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
               <Label>Price (₦)</Label>
-              <Input {...form.register("price")} placeholder="25000" />
+              <Input type="number" inputMode="decimal" {...form.register("price")} placeholder="25000" />
               <FieldError message={form.formState.errors.price?.message} />
             </div>
             <div className="space-y-2">
               <Label>Cost Price (₦)</Label>
-              <Input {...form.register("costPrice")} placeholder="15000" />
+              <Input type="number" inputMode="decimal" {...form.register("costPrice")} placeholder="15000" />
             </div>
             <div className="space-y-2">
               <Label>Discounted Price (₦)</Label>
-              <Input {...form.register("discountedPrice")} placeholder="20000" />
+              <Input type="number" inputMode="decimal" {...form.register("discountedPrice")} placeholder="20000" />
             </div>
             <div className="space-y-2">
               <Label>Stock Quantity</Label>
-              <Input {...form.register("stockQuantity")} placeholder="0" />
+              <Input type="number" inputMode="numeric" {...form.register("stockQuantity")} placeholder="0" />
               <FieldError message={form.formState.errors.stockQuantity?.message} />
             </div>
             <div className="space-y-2">
@@ -434,6 +457,8 @@ export default function CreateProductPage() {
                     <div className="space-y-2 md:col-span-1">
                       <Label>Stock</Label>
                       <Input
+                        type="number"
+                        inputMode="numeric"
                         {...form.register(`variants.${index}.stockQuantity`)}
                         placeholder="0"
                       />
@@ -443,7 +468,7 @@ export default function CreateProductPage() {
                     </div>
                     <div className="space-y-2 md:col-span-1">
                       <Label>Price (₦)</Label>
-                      <Input {...form.register(`variants.${index}.price`)} placeholder="25000" />
+                      <Input type="number" inputMode="decimal" {...form.register(`variants.${index}.price`)} placeholder="25000" />
                     </div>
                     <div className="md:col-span-6 flex justify-end">
                       <Button

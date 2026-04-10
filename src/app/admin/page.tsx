@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { adminCookieName, verifyAdminToken } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic"; // Ensure dashboard shows live data
 
@@ -52,7 +53,7 @@ export default async function AdminDashboardPage() {
     salesAgg,
     recentOrders,
     owedAgg
-  ] = await Promise.all([
+  ] = await prisma.$transaction([
     prisma.order.count(),
     prisma.orderItem.aggregate({
       _sum: { quantity: true },
@@ -81,6 +82,7 @@ export default async function AdminDashboardPage() {
   const amountOwed = Number(owedAgg._sum.total ?? 0);
   const websiteVisits = storeVisitCount;
   const greeting = getGreeting();
+  type RecentOrder = Prisma.OrderGetPayload<{ include: { customer: true } }>;
   
   let adminName = "Admin";
   const cookieStore = await cookies();
@@ -89,7 +91,9 @@ export default async function AdminDashboardPage() {
     try {
       const payload = await verifyAdminToken(token);
       if (payload?.name) adminName = payload.name;
-    } catch(e) {}
+    } catch {
+      // Keep default admin display name if token parsing fails.
+    }
   }
 
   return (
@@ -250,8 +254,7 @@ export default async function AdminDashboardPage() {
                   </div>
                 ) : (
                   <div className="divide-y divide-forest/5">
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    {recentOrders.map((order: any) => (
+                    {recentOrders.map((order: RecentOrder) => (
                       <Link
                         key={order.id}
                         href={`/admin/orders?id=${order.id}`}

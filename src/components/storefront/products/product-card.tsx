@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart } from "lucide-react";
-import { useCartStore } from "@/stores/cartStore";
 
 interface ProductCardProps {
   product: {
@@ -22,7 +20,6 @@ interface ProductCardProps {
 const fallbackImage = "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=800";
 
 export function ProductCard({ product, theme = "dark" }: ProductCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const primaryImage = product.images[0] || fallbackImage;
   
@@ -33,17 +30,13 @@ export function ProductCard({ product, theme = "dark" }: ProductCardProps) {
   const formatCurrency = (value: number) => `NGN ${value.toLocaleString("en-NG")}`;
 
   return (
-    <motion.div
-      className="relative cursor-pointer overflow-hidden"
+    <div
+      className="relative cursor-pointer overflow-hidden group"
       style={{ borderRadius: 4 }}
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
     >
       <div className="relative overflow-hidden" style={{ aspectRatio: "3/4" }}>
-        <motion.div
-          className="absolute inset-0"
-          animate={{ scale: isHovered ? 1.08 : 1 }}
-          transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+        <div
+          className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.08]"
         >
           <Image
             src={primaryImage}
@@ -52,23 +45,20 @@ export function ProductCard({ product, theme = "dark" }: ProductCardProps) {
             className="object-cover"
             sizes="(max-width: 768px) 50vw, 25vw"
           />
-        </motion.div>
+        </div>
 
-        <motion.div
-          className="absolute inset-0"
+        <div
+          className="absolute inset-0 transition-opacity duration-500 opacity-30 group-hover:opacity-100"
           style={{
             background:
               "linear-gradient(to top, rgba(10,25,15,0.85) 0%, rgba(10,25,15,0.2) 50%, transparent 100%)"
           }}
-          animate={{ opacity: isHovered ? 1 : 0.3 }}
-          transition={{ duration: 0.4 }}
         />
 
         {/* Heart Icon - Top Right on Hover */}
-        <motion.button
-          className="absolute right-4 top-4 z-10"
-          animate={{ opacity: isHovered ? 1 : 0, scale: isHovered ? 1 : 0.8 }}
-          transition={{ duration: 0.3, delay: isHovered ? 0.1 : 0 }}
+        <button
+          aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+          className="absolute right-4 top-4 z-10 transition-all duration-300 opacity-0 scale-80 group-hover:opacity-100 group-hover:scale-100 group-hover:delay-100"
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -93,36 +83,34 @@ export function ProductCard({ product, theme = "dark" }: ProductCardProps) {
               strokeWidth: 1.5
             }}
           />
-        </motion.button>
+        </button>
 
         {/* Select Options Button - Bottom on Hover */}
-        <motion.div
-          className="absolute bottom-0 left-0 right-0 p-4 z-10"
-          animate={{ y: isHovered ? 0 : 16, opacity: isHovered ? 1 : 0 }}
-          transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+        <div
+          className="absolute bottom-0 left-0 right-0 p-4 z-10 transition-all duration-500 ease-out opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0"
         >
-          <Link href={`/shop/${product.slug}`}>
-            <button
-              style={{
-                background: "var(--brand-gold)",
-                color: "var(--brand-green)",
-                border: "none",
-                borderRadius: 2,
-                padding: "12px 16px",
-                fontFamily: "var(--font-body)",
-                fontSize: 12,
-                fontWeight: 600,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                cursor: "pointer",
-                width: "100%",
-                textAlign: "center"
-              }}
-            >
-              Select Options
-            </button>
+          <Link
+            href={`/shop/${product.slug}`}
+            style={{
+              background: "var(--brand-gold)",
+              color: "var(--brand-green)",
+              border: "none",
+              borderRadius: 2,
+              padding: "12px 16px",
+              fontFamily: "var(--font-body)",
+              fontSize: 12,
+              fontWeight: 600,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+              width: "100%",
+              textAlign: "center",
+              display: "block"
+            }}
+          >
+            Select Options
           </Link>
-        </motion.div>
+        </div>
 
         {/* Sale Badge */}
         {validDiscountedPrice ? (
@@ -175,6 +163,6 @@ export function ProductCard({ product, theme = "dark" }: ProductCardProps) {
           </p>
         </div>
       </Link>
-    </motion.div>
+    </div>
   );
 }

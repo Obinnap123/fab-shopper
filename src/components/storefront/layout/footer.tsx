@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 
 const InstagramIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -20,7 +23,34 @@ const XIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const fallbackShopLinks = [
+  { label: "New Arrivals", href: "/collections/new-arrivals" },
+  { label: "Women's Shoes", href: "/collections/womens-shoes" },
+  { label: "Men's Shoes", href: "/collections/mens-shoes" },
+  { label: "Bags", href: "/collections/bags" },
+  { label: "Clothing", href: "/collections/clothing" },
+  { label: "Perfumes", href: "/collections/perfumes" },
+  { label: "Accessories", href: "/collections/accessories" }
+];
+
 export function StorefrontFooter() {
+  const { data: collections = [] } = useQuery({
+    queryKey: ["collections-footer"],
+    queryFn: async () => {
+      const response = await fetch("/api/collections");
+      const payload = await response.json();
+      return (payload?.data ?? []) as Array<{ name: string; slug: string }>;
+    }
+  });
+
+  const shopLinks =
+    collections.length > 0
+      ? collections.map((collection) => ({
+          label: collection.name,
+          href: `/collections/${collection.slug}`
+        }))
+      : fallbackShopLinks;
+
   return (
     <footer className="border-t border-[rgba(201,168,76,0.15)] bg-[var(--brand-green-dark)] text-white">
       <div className="mx-auto grid w-full max-w-6xl gap-10 px-6 py-20 md:grid-cols-4">
@@ -55,27 +85,13 @@ export function StorefrontFooter() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">Shop</p>
           <ul className="mt-4 space-y-2 text-sm text-white/60">
-            <li>
-              <Link href="/collections/new-arrivals" className="hover:text-[var(--brand-gold)] transition-colors">New Arrivals</Link>
-            </li>
-            <li>
-              <Link href="/collections/womens-shoes" className="hover:text-[var(--brand-gold)] transition-colors">Women&apos;s Shoes</Link>
-            </li>
-            <li>
-              <Link href="/collections/mens-shoes" className="hover:text-[var(--brand-gold)] transition-colors">Men&apos;s Shoes</Link>
-            </li>
-            <li>
-              <Link href="/collections/bags" className="hover:text-[var(--brand-gold)] transition-colors">Bags</Link>
-            </li>
-            <li>
-              <Link href="/collections/clothing" className="hover:text-[var(--brand-gold)] transition-colors">Clothing</Link>
-            </li>
-            <li>
-              <Link href="/collections/perfumes" className="hover:text-[var(--brand-gold)] transition-colors">Perfumes</Link>
-            </li>
-            <li>
-              <Link href="/collections/accessories" className="hover:text-[var(--brand-gold)] transition-colors">Accessories</Link>
-            </li>
+            {shopLinks.map((item) => (
+              <li key={item.href}>
+                <Link href={item.href} className="hover:text-[var(--brand-gold)] transition-colors">
+                  {item.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -117,7 +133,7 @@ export function StorefrontFooter() {
             <Link href="/admin/login" className="ml-4 font-medium opacity-40 hover:opacity-100 transition-opacity">Staff Login</Link>
           </span>
           <span className="rounded-full border border-[rgba(201,168,76,0.4)] px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-[var(--brand-gold)] flex items-center gap-2">
-            Secured by Paystack
+            Secured by CodeHive
           </span>
         </div>
       </div>

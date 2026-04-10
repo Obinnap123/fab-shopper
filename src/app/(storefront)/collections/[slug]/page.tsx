@@ -1,19 +1,36 @@
-import { notFound } from 'next/navigation'
 import { ProductCard } from '@/components/storefront/products/product-card'
 import { PageSpacer } from '@/components/storefront/layout/page-spacer'
 import { prisma } from '@/lib/prisma'
 
 interface CollectionPageProps {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
+
+type CollectionPageProduct = {
+  id: string;
+  name: string;
+  slug: string;
+  images: string[];
+  price: number;
+  discountedPrice: number | null;
+};
+
+const normalizeSlugKey = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+    .replace(/s$/, "");
 
 async function getCollection(slug: string) {
   try {
-    const collection = await prisma.collection.findUnique({
-      where: { slug }
-    })
-    return collection
+    const exactMatch = await prisma.collection.findUnique({ where: { slug } });
+    if (exactMatch) return exactMatch;
+
+    const collections = await prisma.collection.findMany({
+      select: { id: true, slug: true, name: true, image: true }
+    });
+    const requested = normalizeSlugKey(slug);
+    return collections.find((collection) => normalizeSlugKey(collection.slug) === requested) ?? null;
   } catch (error) {
     console.error("Failed to fetch collection:", error)
     return null
@@ -61,6 +78,7 @@ export async function generateStaticParams() {
 export default async function CollectionPage(props: CollectionPageProps) {
   const { slug } = await props.params;
   const collection = await getCollection(slug)
+  const resolvedSlug = collection?.slug ?? slug;
   
   // If collection doesn't exist in DB, show a graceful page anyway
   // based on the slug name (for hardcoded category collections)
@@ -70,7 +88,7 @@ export default async function CollectionPage(props: CollectionPageProps) {
       .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ')
 
-  const products = await getCollectionProducts(slug)
+  const products = await getCollectionProducts(resolvedSlug)
 
   return (
     <main>
@@ -140,7 +158,7 @@ export default async function CollectionPage(props: CollectionPageProps) {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
-              {products.map((product: any) => (
+              {products.map((product: CollectionPageProduct) => (
                 <ProductCard key={product.id} product={product} theme="light" />
               ))}
             </div>

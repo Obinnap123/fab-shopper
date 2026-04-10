@@ -4,16 +4,27 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { slugify } from "@/lib/slug";
 
+const coerceNumberish = (value: unknown) => {
+  if (typeof value === "number") return value;
+  if (typeof value !== "string") return value;
+
+  const normalized = value.replace(/[^\d.-]/g, "").trim();
+  if (!normalized) return undefined;
+
+  const numeric = Number(normalized);
+  return Number.isFinite(numeric) ? numeric : value;
+};
+
 const createProductSchema = z.object({
   name: z.string().min(2),
   slug: z.string().optional(),
   shortDescription: z.string().optional(),
   longDescription: z.string().optional(),
   productType: z.enum(["SIMPLE", "VARIABLE"]).optional(),
-  price: z.coerce.number().positive(),
-  costPrice: z.coerce.number().nonnegative().optional(),
-  discountedPrice: z.coerce.number().nonnegative().optional(),
-  stockQuantity: z.coerce.number().int().nonnegative().default(0),
+  price: z.preprocess(coerceNumberish, z.number().positive()),
+  costPrice: z.preprocess(coerceNumberish, z.number().nonnegative().optional()),
+  discountedPrice: z.preprocess(coerceNumberish, z.number().nonnegative().optional()),
+  stockQuantity: z.preprocess(coerceNumberish, z.number().int().nonnegative().default(0)),
   unit: z.string().optional(),
   barcode: z.string().optional(),
   status: z.enum(["PUBLISHED", "DRAFT", "OUT_OF_STOCK"]).optional(),
@@ -27,8 +38,8 @@ const createProductSchema = z.object({
         color: z.string().optional(),
         material: z.string().optional(),
         fitType: z.string().optional(),
-        stockQuantity: z.coerce.number().int().nonnegative().default(0),
-        price: z.coerce.number().positive().optional(),
+        stockQuantity: z.preprocess(coerceNumberish, z.number().int().nonnegative().default(0)),
+        price: z.preprocess(coerceNumberish, z.number().positive().optional()),
         images: z.array(z.string()).optional(),
         sku: z.string().optional()
       })
