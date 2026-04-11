@@ -1,13 +1,14 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 
-import { Search } from "lucide-react";
+import { Search, Edit2, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -60,6 +61,7 @@ export function ProductsClient() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState(defaultFilters);
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const searchParams = useSearchParams();
 
   const form = useForm<ProductForm>({
@@ -120,6 +122,18 @@ export function ProductsClient() {
     }
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete product");
+      return res.json();
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["products"] });
+      setProductToDelete(null);
+    }
+  });
+
   useEffect(() => {
     if (searchParams.get("new") === "1") {
       setOpen(true);
@@ -132,6 +146,32 @@ export function ProductsClient() {
 
   return (
     <div className="space-y-6">
+      <Dialog open={!!productToDelete} onOpenChange={(open) => !open && setProductToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Product</DialogTitle>
+          </DialogHeader>
+          <div className="mt-2 text-sm text-forest/70">
+            Are you sure you want to delete this product? This action cannot be undone.
+          </div>
+          <div className="mt-6 flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setProductToDelete(null)}
+              disabled={deleteMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-rose-600 text-white hover:bg-rose-700"
+              onClick={() => productToDelete && deleteMutation.mutate(productToDelete)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete Permanently"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
@@ -362,6 +402,7 @@ export function ProductsClient() {
             <TableHead>In Stock</TableHead>
             <TableHead>Price</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -400,6 +441,25 @@ export function ProductsClient() {
                 >
                   {product.status.replace("_", " ")}
                 </Badge>
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex items-center justify-end gap-2">
+                  <Button variant="outline" size="sm" className="h-8 rounded-full border-forest/20 px-3 text-xs font-semibold text-forest/80 hover:bg-forest hover:text-white transition-colors" asChild>
+                    <Link href={`/admin/products/${product.id}/edit`}>
+                      <Edit2 className="mr-1.5 h-3 w-3" />
+                      Edit
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 rounded-full border-rose-200 px-3 text-xs font-semibold text-rose-500 hover:border-rose-600 hover:bg-rose-600 hover:text-white transition-colors"
+                    onClick={() => setProductToDelete(product.id)}
+                  >
+                    <Trash2 className="mr-1.5 h-3 w-3" />
+                    Delete
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
