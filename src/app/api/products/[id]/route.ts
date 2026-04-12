@@ -221,6 +221,34 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  await prisma.product.delete({ where: { id } });
+
+  const product = await prisma.product.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      orderItems: { select: { id: true }, take: 1 }
+    }
+  });
+
+  if (!product) {
+    return NextResponse.json({ error: "Product not found" }, { status: 404 });
+  }
+
+  if (product.orderItems.length > 0) {
+    return NextResponse.json(
+      {
+        error:
+          "This product can't be deleted because it is linked to an order. Remove it from order history manually if you still need to archive it."
+      },
+      { status: 409 }
+    );
+  }
+
+  await prisma.$transaction([
+    prisma.productVariant.deleteMany({ where: { productId: id } }),
+    prisma.productAttribute.deleteMany({ where: { productId: id } }),
+    prisma.product.delete({ where: { id } })
+  ]);
+
   return NextResponse.json({ ok: true });
 }

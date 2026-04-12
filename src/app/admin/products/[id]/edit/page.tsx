@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { useForm, Controller, useFieldArray, type FieldErrors, type FieldValues } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Trash2, UploadCloud } from "lucide-react";
+import { AlertCircle, ArrowLeft, Loader2, Trash2, UploadCloud } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import { AdminShell } from "@/components/admin/layout/admin-shell";
@@ -52,6 +52,69 @@ const productSchema = z.object({
 
 type ProductForm = z.infer<typeof productSchema>;
 
+const fieldLabels: Record<string, string> = {
+  name: "Product name",
+  price: "Price",
+  stockQuantity: "Stock quantity",
+  status: "Status",
+  collectionId: "Collection",
+  newCollection: "New collection",
+  shortDescription: "Short description",
+  longDescription: "Long description"
+};
+
+function formatFieldPath(path: string) {
+  const variantMatch = path.match(/^variants\.(\d+)\.(.+)$/);
+  if (variantMatch) {
+    const variantNumber = Number(variantMatch[1]) + 1;
+    const variantField = variantMatch[2];
+    const variantLabels: Record<string, string> = {
+      size: "size",
+      color: "color",
+      material: "material",
+      fitType: "fit type",
+      stockQuantity: "stock quantity",
+      price: "price"
+    };
+
+    return `Variation ${variantNumber} ${variantLabels[variantField] ?? variantField}`;
+  }
+
+  return fieldLabels[path] ?? path;
+}
+
+function formatFieldMessage(path: string, message: string) {
+  if (path === "status") {
+    return "Please choose a product status before updating.";
+  }
+
+  return `${formatFieldPath(path)}: ${message}`;
+}
+
+function collectFieldErrors(errors: FieldErrors<FieldValues>, prefix = ""): string[] {
+  return Object.entries(errors).flatMap(([key, value]) => {
+    if (!value) return [];
+
+    const path = prefix ? `${prefix}.${key}` : key;
+
+    if ("message" in value && typeof value.message === "string" && value.message) {
+      return [formatFieldMessage(path, value.message)];
+    }
+
+    if (Array.isArray(value)) {
+      return value.flatMap((item, index) =>
+        item ? collectFieldErrors(item as FieldErrors<FieldValues>, `${path}.${index}`) : []
+      );
+    }
+
+    if (typeof value === "object") {
+      return collectFieldErrors(value as FieldErrors<FieldValues>, path);
+    }
+
+    return [];
+  });
+}
+
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return <p className="text-xs text-rose-500">{message}</p>;
@@ -76,7 +139,9 @@ export default function EditProductPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<ProductForm | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [validationSummary, setValidationSummary] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   const { data: productData, isLoading: isLoadingProduct } = useQuery({
     queryKey: ["product", id],
@@ -207,6 +272,7 @@ export default function EditProductPage() {
 
   const onSubmit = form.handleSubmit(async (values) => {
     setErrorMessage(null);
+    setValidationSummary([]);
     const parsedPrice = parseNumberish(values.price);
     const parsedStock = parseNumberish(values.stockQuantity);
 
@@ -272,6 +338,22 @@ export default function EditProductPage() {
     }
 
     router.push("/admin/products");
+  }, (errors) => {
+    const issues = collectFieldErrors(errors as FieldErrors<FieldValues>);
+    setErrorMessage("We couldn't update this product yet. Please check the fields below and try again.");
+    setValidationSummary(issues);
+
+    if (typeof window !== "undefined") {
+      requestAnimationFrame(() => {
+        const formElement = formRef.current;
+        const firstInvalidField =
+          formElement?.querySelector<HTMLElement>("[aria-invalid='true'], [data-invalid='true']") ??
+          formElement?.querySelector<HTMLElement>("input:invalid, textarea:invalid, select:invalid");
+
+        firstInvalidField?.scrollIntoView({ behavior: "smooth", block: "center" });
+        firstInvalidField?.focus();
+      });
+    }
   });
 
   const productType = form.watch("productType");
@@ -289,7 +371,7 @@ export default function EditProductPage() {
 
   return (
     <AdminShell>
-      <form onSubmit={onSubmit} className="space-y-6">
+      <form ref={formRef} onSubmit={onSubmit} className="space-y-6" noValidate>
         <PageHeader
           eyebrow="Products"
           title="Edit Product"
@@ -570,8 +652,27 @@ export default function EditProductPage() {
           </SectionCard>
         ) : null}
         {errorMessage ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
-            {errorMessage}
+          <div
+            className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+            role="alert"
+            aria-live="polite"
+          >
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              <div className="space-y-2">
+                <p className="font-medium">{errorMessage}</p>
+                {validationSummary.length ? (
+                  <ul className="list-disc space-y-1 pl-5 text-xs text-rose-700/90">
+                    {validationSummary.slice(0, 6).map((issue) => (
+                      <li key={issue}>{issue}</li>
+                    ))}
+                    {validationSummary.length > 6 ? (
+                      <li>{`and ${validationSummary.length - 6} more field${validationSummary.length - 6 === 1 ? "" : "s"}`}</li>
+                    ) : null}
+                  </ul>
+                ) : null}
+              </div>
+            </div>
           </div>
         ) : null}
 

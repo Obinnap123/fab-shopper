@@ -62,6 +62,7 @@ export function ProductsClient() {
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState(defaultFilters);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const searchParams = useSearchParams();
 
   const form = useForm<ProductForm>({
@@ -125,12 +126,19 @@ export function ProductsClient() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete product");
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        throw new Error(payload?.error ?? "Failed to delete product");
+      }
       return res.json();
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["products"] });
+      setDeleteError(null);
       setProductToDelete(null);
+    },
+    onError: (error) => {
+      setDeleteError(error instanceof Error ? error.message : "Failed to delete product");
     }
   });
 
@@ -154,17 +162,30 @@ export function ProductsClient() {
           <div className="mt-2 text-sm text-forest/70">
             Are you sure you want to delete this product? This action cannot be undone.
           </div>
+          {deleteError ? (
+            <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {deleteError}
+            </div>
+          ) : null}
           <div className="mt-6 flex justify-end gap-3">
             <Button
               variant="outline"
-              onClick={() => setProductToDelete(null)}
+              onClick={() => {
+                setDeleteError(null);
+                setProductToDelete(null);
+              }}
               disabled={deleteMutation.isPending}
             >
               Cancel
             </Button>
             <Button
               className="bg-rose-600 text-white hover:bg-rose-700"
-              onClick={() => productToDelete && deleteMutation.mutate(productToDelete)}
+              onClick={() => {
+                setDeleteError(null);
+                if (productToDelete) {
+                  deleteMutation.mutate(productToDelete);
+                }
+              }}
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? "Deleting..." : "Delete Permanently"}
@@ -454,7 +475,10 @@ export function ProductsClient() {
                     variant="outline"
                     size="sm"
                     className="h-8 rounded-full border-rose-200 px-3 text-xs font-semibold text-rose-500 hover:border-rose-600 hover:bg-rose-600 hover:text-white transition-colors"
-                    onClick={() => setProductToDelete(product.id)}
+                    onClick={() => {
+                      setDeleteError(null);
+                      setProductToDelete(product.id);
+                    }}
                   >
                     <Trash2 className="mr-1.5 h-3 w-3" />
                     Delete
