@@ -4,17 +4,14 @@ import { prisma } from "@/lib/prisma";
 
 const orderItemSchema = z.object({
   productId: z.string().min(1),
-  quantity: z.coerce.number().int().positive(),
-  price: z.coerce.number().positive()
+  quantity: z.coerce.number().int().positive()
 });
 
 const createOrderSchema = z.object({
   customerId: z.string().min(1),
   items: z.array(orderItemSchema).min(1),
-  subtotal: z.coerce.number().nonnegative(),
   shippingFee: z.coerce.number().nonnegative().default(0),
   vatAmount: z.coerce.number().nonnegative().default(0),
-  total: z.coerce.number().nonnegative(),
   status: z.enum(["PENDING", "PROCESSING", "SHIPPED", "COMPLETED", "CANCELLED", "ABANDONED"]).optional(),
   paymentStatus: z.enum(["UNPAID", "PAID", "PARTIALLY_PAID", "REFUNDED"]).optional()
 });
@@ -86,21 +83,46 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid payload", issues: parsed.error.flatten() }, { status: 400 });
   }
 
-  const orderCount = await prisma.order.count();
-  const orderNumber = `ORD-${String(orderCount + 1).padStart(5, "0")}`;
+  let subtotal = 0;
+  const normalizedItems: { productId: string; quantity: number; price: number }[] = [];
+
+  for (const item of parsed.data.items) {
+    const product = await prisma.product.findUnique({ where: { id: item.productId } });
+    if (!product) {
+      return NextResponse.json({ error: `Product not found: ${item.productId}` }, { status: 404 });
+    }
+
+    if (item.quantity > product.stockQuantity) {
+      return NextResponse.json(
+        { error: `Insufficient stock for ${product.name}. Available: ${product.stockQuantity}` },
+        { status: 409 }
+      );
+    }
+
+    const price = Number(product.discountedPrice ?? product.price);
+    subtotal += price * item.quantity;
+    normalizedItems.push({
+      productId: item.productId,
+      quantity: item.quantity,
+      price
+    });
+  }
+
+  const total = subtotal + parsed.data.shippingFee + parsed.data.vatAmount;
+  const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
   const order = await prisma.order.create({
     data: {
       orderNumber,
       customerId: parsed.data.customerId,
-      subtotal: parsed.data.subtotal,
+      subtotal,
       shippingFee: parsed.data.shippingFee,
       vatAmount: parsed.data.vatAmount,
-      total: parsed.data.total,
+      total,
       status: parsed.data.status ?? "PENDING",
       paymentStatus: parsed.data.paymentStatus ?? "UNPAID",
       items: {
-        create: parsed.data.items.map((item) => ({
+        create: normalizedItems.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
           price: item.price

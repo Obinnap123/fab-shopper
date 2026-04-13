@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Trash2, UploadCloud } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { AdminShell } from "@/components/admin/layout/admin-shell";
 import { PageHeader } from "@/components/admin/ui/page-header";
@@ -163,6 +164,7 @@ export default function CreateProductPage() {
 
     if (parsedPrice === undefined || parsedStock === undefined) {
       setErrorMessage("Please enter valid numeric values for price and stock quantity.");
+      toast.error("Please enter valid numeric values for price and stock quantity.");
       return;
     }
 
@@ -218,11 +220,13 @@ export default function CreateProductPage() {
         : "";
 
       setErrorMessage(payload?.error ? `${payload.error}${fieldIssues ? ` (${fieldIssues})` : ""}` : raw || "Failed to create product");
+      toast.error(payload?.error ?? "Failed to create product.");
       return;
     }
 
     form.reset();
     setImages([]);
+    toast.success("Product created successfully.");
     router.push("/admin/products");
   });
 
@@ -593,7 +597,6 @@ export default function CreateProductPage() {
     </AdminShell>
   );
 }
-
 
 
 

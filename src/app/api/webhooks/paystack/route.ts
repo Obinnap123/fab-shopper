@@ -23,19 +23,49 @@ export async function POST(request: Request) {
 
     if (event.event === "charge.success") {
       const reference = event.data.reference;
-      
       const order = await prisma.order.findUnique({
-        where: { orderNumber: reference }
+        where: { orderNumber: reference },
+        include: { items: true }
       });
 
       if (order && order.paymentStatus !== "PAID") {
-        await prisma.order.update({
-          where: { id: order.id },
-          data: {
-            paymentStatus: "PAID",
-            paystackRef: event.data.id?.toString(),
-            status: "PROCESSING" // Move to processing after payment
+        await prisma.$transaction(async (tx) => {
+          await tx.order.update({
+            where: { id: order.id },
+            data: {
+              paymentStatus: "PAID",
+              paystackRef: event.data.id?.toString(),
+              status: "PROCESSING"
+            }
+          });
+
+          for (const item of order.items) {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: {
+                stockQuantity: { decrement: item.quantity }
+              }
+            });
+
+            if (item.variantId) {
+              await tx.productVariant.update({
+                where: { id: item.variantId },
+                data: {
+                  stockQuantity: { decrement: item.quantity }
+                }
+              });
+            }
           }
+        });
+      }
+    }
+
+    if (event.event === "charge.failed" || event.event === "charge.abandoned") {
+      const reference = event.data?.reference;
+      if (reference) {
+        await prisma.order.updateMany({
+          where: { orderNumber: reference, paymentStatus: "UNPAID" },
+          data: { status: "ABANDONED" }
         });
       }
     }

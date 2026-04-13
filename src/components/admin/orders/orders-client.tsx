@@ -729,20 +729,22 @@ export function OrdersClient() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 border-t border-forest/10 px-6 py-4 text-sm text-forest/60">
-          <span>Show</span>
-          <Select defaultValue="25">
-            <SelectTrigger className="h-9 w-[90px] rounded-full text-xs font-semibold uppercase tracking-[0.2em]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="25">25</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-            </SelectContent>
-          </Select>
-          <span>Entries</span>
-        </div>
+        {filteredOrders.length ? (
+          <div className="flex items-center gap-2 border-t border-forest/10 px-6 py-4 text-sm text-forest/60">
+            <span>Show</span>
+            <Select defaultValue="25">
+              <SelectTrigger className="h-9 w-[90px] rounded-full text-xs font-semibold uppercase tracking-[0.2em]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+            <span>Entries</span>
+          </div>
+        ) : null}
       </div>
     </div>
   );

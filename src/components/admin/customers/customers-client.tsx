@@ -5,12 +5,14 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { fetchJson } from "@/lib/fetch-json";
 
 const customerSchema = z.object({
   firstName: z.string().min(1),
@@ -41,26 +43,27 @@ export function CustomersClient() {
   const { data } = useQuery({
     queryKey: ["customers"],
     queryFn: async () => {
-      const res = await fetch("/api/customers");
-      const json = await res.json();
+      const json = await fetchJson<{ data: Customer[] }>("/api/customers");
       return json.data as Customer[];
     }
   });
 
   const mutation = useMutation({
     mutationFn: async (values: CustomerForm) => {
-      const res = await fetch("/api/customers", {
+      return fetchJson("/api/customers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values)
       });
-      if (!res.ok) throw new Error("Failed to create customer");
-      return res.json();
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["customers"] });
       form.reset();
       setOpen(false);
+      toast.success("Customer added successfully.");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Couldn't create customer.");
     }
   });
 
@@ -124,15 +127,25 @@ export function CustomersClient() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {(data ?? []).map((customer) => (
-            <TableRow key={customer.id}>
-              <TableCell className="font-semibold text-forest">
-                {customer.firstName} {customer.lastName}
+          {(data ?? []).length ? (
+            (data ?? []).map((customer) => (
+              <TableRow key={customer.id}>
+                <TableCell className="font-semibold text-forest">
+                  {customer.firstName} {customer.lastName}
+                </TableCell>
+                <TableCell>{customer.email ?? "-"}</TableCell>
+                <TableCell>{customer.phone ?? "-"}</TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={3}>
+                <div className="py-10 text-center text-sm text-forest/60">
+                  No customers yet. Add your first customer to get started.
+                </div>
               </TableCell>
-              <TableCell>{customer.email ?? "-"}</TableCell>
-              <TableCell>{customer.phone ?? "-"}</TableCell>
             </TableRow>
-          ))}
+          )}
         </TableBody>
       </Table>
     </div>

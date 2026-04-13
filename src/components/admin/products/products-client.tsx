@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
 
 import { Search, Edit2, Trash2 } from "lucide-react";
 
@@ -17,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { fetchJson } from "@/lib/fetch-json";
 
 const productSchema = z.object({
   name: z.string().min(2),
@@ -57,6 +59,7 @@ const defaultFilters = {
 
 export function ProductsClient() {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -73,8 +76,7 @@ export function ProductsClient() {
   const { data: collectionsData } = useQuery({
     queryKey: ["collections"],
     queryFn: async () => {
-      const res = await fetch("/api/collections");
-      const json = await res.json();
+      const json = await fetchJson<{ data: Collection[] }>("/api/collections");
       return json.data as Collection[];
     }
   });
@@ -91,8 +93,7 @@ export function ProductsClient() {
       if (filters.minPrice) params.set("minPrice", filters.minPrice);
       if (filters.maxPrice) params.set("maxPrice", filters.maxPrice);
 
-      const res = await fetch(`/api/products?${params.toString()}`);
-      const json = await res.json();
+      const json = await fetchJson<{ data: Product[]; total: number }>(`/api/products?${params.toString()}`);
       return json as { data: Product[]; total: number };
     }
   });
@@ -107,38 +108,40 @@ export function ProductsClient() {
         collectionIds: values.collectionId ? [values.collectionId] : undefined,
         collectionName: values.newCollection?.trim() || undefined
       };
-      const res = await fetch("/api/products", {
+      return fetchJson("/api/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      if (!res.ok) throw new Error("Failed to create product");
-      return res.json();
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["products"] });
       await queryClient.invalidateQueries({ queryKey: ["collections"] });
       form.reset();
       setOpen(false);
+      router.refresh();
+      toast.success("Product created successfully.");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Couldn't create product. Please try again.");
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const payload = await res.json().catch(() => null);
-        throw new Error(payload?.error ?? "Failed to delete product");
-      }
-      return res.json();
+      return fetchJson(`/api/products/${id}`, { method: "DELETE" });
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["products"] });
       setDeleteError(null);
       setProductToDelete(null);
+      router.refresh();
+      toast.success("Product deleted.");
     },
     onError: (error) => {
-      setDeleteError(error instanceof Error ? error.message : "Failed to delete product");
+      const message = error instanceof Error ? error.message : "Failed to delete product";
+      setDeleteError(message);
+      toast.error(message);
     }
   });
 
@@ -411,6 +414,8 @@ export function ProductsClient() {
         </div>
       </div>
 
+      {products.length > 0 ? (
+        <>
       <Table>
         <TableHeader>
           <TableRow className="bg-neutral-50">
@@ -523,6 +528,15 @@ export function ProductsClient() {
           </Button>
         </div>
       </div>
+        </>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-forest/20 bg-forest/5 px-6 py-12 text-center">
+          <p className="text-base font-semibold text-forest">No products yet</p>
+          <p className="mt-2 text-sm text-forest/60">
+            Add a new product to start filling this list.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

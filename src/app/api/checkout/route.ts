@@ -1,7 +1,23 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCustomerSession } from "@/lib/customer-auth";
 import { getPaystackSecretKey } from "@/lib/paystack";
+import { ALLOWED_SHIPPING_FEES, DEFAULT_SHIPPING_FEE } from "@/lib/shipping-options";
+
+const checkoutSchema = z.object({
+  items: z.array(
+    z.object({
+      productId: z.string().min(1),
+      quantity: z.coerce.number().int().positive(),
+      size: z.string().optional(),
+      color: z.string().optional()
+    })
+  ).min(1),
+  shippingDetails: z.object({
+    fee: z.coerce.number().nonnegative().optional()
+  }).optional()
+});
 
 export async function POST(request: Request) {
   try {
@@ -10,27 +26,62 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { items, shippingDetails } = await request.json();
-
-    if (!items || items.length === 0) {
-      return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
+    const body = await request.json().catch(() => null);
+    const parsedBody = checkoutSchema.safeParse(body);
+    if (!parsedBody.success) {
+      return NextResponse.json({ error: "Invalid checkout payload", issues: parsedBody.error.flatten() }, { status: 400 });
     }
+
+    const { items, shippingDetails } = parsedBody.data;
 
     // Calculate total from DB to prevent tampering
     let subtotal = 0;
-    const orderItems = [];
+    const orderItems: {
+      productId: string;
+      variantId?: string;
+      quantity: number;
+      price: number;
+      size?: string;
+      color?: string;
+    }[] = [];
 
     for (const item of items) {
       const dbProduct = await prisma.product.findUnique({
-        where: { id: item.productId }
+        where: { id: item.productId },
+        include: { variants: true }
       });
       if (!dbProduct) throw new Error(`Product ${item.productId} not found`);
+
+      if (dbProduct.status === "OUT_OF_STOCK") {
+        throw new Error(`${dbProduct.name} is out of stock`);
+      }
+
+      let selectedVariant = undefined;
+      if (item.size || item.color) {
+        selectedVariant = dbProduct.variants.find((variant) => {
+          const sizeMatches = item.size ? variant.size === item.size : true;
+          const colorMatches = item.color ? variant.color === item.color : true;
+          return sizeMatches && colorMatches;
+        });
+
+        if (!selectedVariant) {
+          throw new Error(`Selected variation is no longer available for ${dbProduct.name}`);
+        }
+      }
+
+      const availableStock = selectedVariant ? selectedVariant.stockQuantity : dbProduct.stockQuantity;
+      if (item.quantity > availableStock) {
+        throw new Error(
+          `Only ${availableStock} unit(s) left for ${dbProduct.name}${selectedVariant ? " (selected variation)" : ""}`
+        );
+      }
 
       const price = Number(dbProduct.discountedPrice || dbProduct.price);
       subtotal += price * item.quantity;
 
       orderItems.push({
         productId: item.productId,
+        variantId: selectedVariant?.id,
         quantity: item.quantity,
         price,
         size: item.size,
@@ -38,8 +89,11 @@ export async function POST(request: Request) {
       });
     }
 
-    // Handle Shipping fee (mocking based on UI selection or fixed for now)
-    const shippingFee = shippingDetails?.fee || 4500;
+    // Allow only known shipping fee options to prevent payload tampering
+    const shippingFee = shippingDetails?.fee ?? DEFAULT_SHIPPING_FEE;
+    if (!ALLOWED_SHIPPING_FEES.has(shippingFee)) {
+      return NextResponse.json({ error: "Invalid shipping option selected" }, { status: 400 });
+    }
     const total = subtotal + shippingFee;
 
     // Generate Order Number

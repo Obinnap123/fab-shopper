@@ -2,14 +2,16 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { PageSpacer } from "@/components/storefront/layout/page-spacer";
 import { useCartStore } from "@/stores/cartStore";
+import { DEFAULT_SHIPPING_FEE, SHIPPING_OPTIONS } from "@/lib/shipping-options";
 
 export default function CheckoutView() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [shippingFee, setShippingFee] = useState(4500);
-  const { items, total, clearCart } = useCartStore();
+  const [shippingFee, setShippingFee] = useState(DEFAULT_SHIPPING_FEE);
+  const { items, total } = useCartStore();
   const [error, setError] = useState<string | null>(null);
 
   const cartTotal = total();
@@ -20,6 +22,7 @@ export default function CheckoutView() {
   const handleCheckout = async () => {
     if (items.length === 0) {
       setError("Your cart is empty");
+      toast.error("Your cart is empty. Add an item before checkout.");
       return;
     }
 
@@ -42,12 +45,12 @@ export default function CheckoutView() {
         throw new Error(data.error || "Failed to initialize checkout");
       }
 
-      // Clear the local cart before redirecting to Paystack
-      clearCart();
       window.location.href = data.authorization_url;
 
     } catch (err: any) {
-      setError(err.message);
+      const message = err?.message || "Couldn't start checkout. Please try again.";
+      setError(message);
+      toast.error(message);
       setLoading(false);
     }
   };
@@ -100,15 +103,7 @@ export default function CheckoutView() {
             </div>
             <div className="space-y-3 text-sm text-[var(--brand-green)]/80 mt-6">
               <p className="font-semibold mb-2">Select your shipping rate:</p>
-              {[
-                { label: "Standard (Within Lagos)", fee: 4500 },
-                { label: "South West", fee: 6500 },
-                { label: "South East", fee: 7000 },
-                { label: "South", fee: 7500 },
-                { label: "Abuja", fee: 7500 },
-                { label: "All Northern States", fee: 8000 },
-                { label: "Pick up from Store", fee: 0 },
-              ].map((loc) => (
+              {SHIPPING_OPTIONS.map((loc) => (
                 <label key={loc.label} className="flex items-center gap-3 cursor-pointer">
                   <input 
                     type="radio" 

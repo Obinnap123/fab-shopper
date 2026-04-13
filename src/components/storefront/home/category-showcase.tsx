@@ -86,14 +86,14 @@ export function CategoryShowcase() {
         </div>
 
         <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {displayCollections.map((category: any, index: number) => (
+          {displayCollections.map((category: any) => (
             <motion.div
               key={category.name}
               className="category-card group relative overflow-hidden cursor-pointer"
               initial="rest"
               whileHover="hover"
             >
-              <div className={`relative w-full ${index % 2 === 0 ? "h-[380px]" : "h-[420px]"}`}>
+              <div className="relative h-[380px] w-full">
                 {/* Image Scale on Hover */}
                 <motion.div
                   className="absolute inset-0"

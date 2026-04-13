@@ -8,6 +8,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { AlertCircle, ArrowLeft, Loader2, Trash2, UploadCloud } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { AdminShell } from "@/components/admin/layout/admin-shell";
 import { PageHeader } from "@/components/admin/ui/page-header";
@@ -278,6 +279,7 @@ export default function EditProductPage() {
 
     if (parsedPrice === undefined || parsedStock === undefined) {
       setErrorMessage("Please enter valid numeric values for price and stock quantity.");
+      toast.error("Please enter valid numeric values for price and stock quantity.");
       return;
     }
 
@@ -334,14 +336,17 @@ export default function EditProductPage() {
         : "";
 
       setErrorMessage(responsePayload?.error ? `${responsePayload.error}${fieldIssues ? ` (${fieldIssues})` : ""}` : raw || "Failed to update product");
+      toast.error(responsePayload?.error ?? "Failed to update product.");
       return;
     }
 
+    toast.success("Product updated successfully.");
     router.push("/admin/products");
   }, (errors) => {
     const issues = collectFieldErrors(errors as FieldErrors<FieldValues>);
     setErrorMessage("We couldn't update this product yet. Please check the fields below and try again.");
     setValidationSummary(issues);
+    toast.error("Please review highlighted fields before updating.");
 
     if (typeof window !== "undefined") {
       requestAnimationFrame(() => {

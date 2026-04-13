@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { updateSnapPixel } from "./actions";
 
@@ -21,14 +22,14 @@ export function AppsClientList({ apps }: { apps: AppItem[] }) {
         setConnecting(true);
         try {
           await updateSnapPixel(pixelId);
-          alert("Snapchat Pixel connected successfully!");
+          toast.success("Snapchat Pixel connected successfully.");
         } catch (e) {
-          alert("Failed to save pixel.");
+          toast.error("Couldn't save your Snapchat Pixel ID. Please try again.");
         }
         setConnecting(false);
       }
     } else {
-      alert(`${app.name} integration is not available in demo mode.`);
+      toast.message(`${app.name} integration is not available in demo mode yet.`);
     }
   };
 
