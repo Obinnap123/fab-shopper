@@ -7,7 +7,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 
-import { AdminShell } from "@/components/admin/layout/admin-shell";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { Button } from "@/components/ui/button";
@@ -88,7 +87,7 @@ export function StaffClient() {
   const staff = data ?? [];
 
   return (
-    <AdminShell>
+    <>
       <section className="space-y-6">
         <PageHeader
           eyebrow="Operations"
@@ -200,6 +199,6 @@ export function StaffClient() {
           </DialogContent>
         </Dialog>
       </section>
-    </AdminShell>
+    </>
   );
 }

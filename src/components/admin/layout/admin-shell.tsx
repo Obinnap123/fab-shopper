@@ -5,14 +5,19 @@ import { Menu, X } from "lucide-react";
 import { AdminHeader } from "@/components/admin/layout/admin-header";
 import { AdminSidebar } from "@/components/admin/layout/admin-sidebar";
 
-export function AdminShell({ children }: { children: React.ReactNode }) {
+type AdminShellProps = {
+  children: React.ReactNode;
+  role: string;
+};
+
+export function AdminShell({ children, role }: AdminShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <div className="relative h-dvh overflow-hidden bg-neutral-50 text-neutral-900">
       <div className="grid h-full min-h-0 grid-cols-1 lg:grid-cols-[260px_1fr]">
         <div className="hidden h-dvh lg:flex">
-          <AdminSidebar />
+          <AdminSidebar role={role} />
         </div>
 
         <div className="flex h-full min-h-0 flex-col">
@@ -61,7 +66,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <AdminSidebar onNavigate={() => setMobileOpen(false)} />
+            <AdminSidebar role={role} onNavigate={() => setMobileOpen(false)} />
           </div>
         </div>
       ) : null}

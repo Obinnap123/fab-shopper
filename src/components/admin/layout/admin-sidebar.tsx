@@ -17,7 +17,6 @@ import {
   UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getAdminRole } from "./admin-sidebar-action";
 
 const ALL_SECTIONS = [
   { title: "Dashboard", href: "/admin", icon: LayoutGrid },
@@ -69,17 +68,13 @@ const ALL_SECTIONS = [
 ];
 
 type AdminSidebarProps = {
+  role: string;
   onNavigate?: () => void;
 };
 
-export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
+export function AdminSidebar({ role, onNavigate }: AdminSidebarProps) {
   const pathname = usePathname();
-  const [role, setRole] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
-
-  useEffect(() => {
-    getAdminRole().then(setRole);
-  }, []);
 
   const navSections = useMemo(() => {
     if (role === "STAFF") {

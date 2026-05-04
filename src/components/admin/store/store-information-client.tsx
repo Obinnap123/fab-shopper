@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { CalendarDays, Pencil, Plus } from "lucide-react";
 
-import { AdminShell } from "@/components/admin/layout/admin-shell";
 import { PageHeader } from "@/components/admin/ui/page-header";
 import { SectionCard } from "@/components/admin/ui/section-card";
 import { Button } from "@/components/ui/button";
@@ -67,7 +66,7 @@ export function StoreInformationClient() {
   };
 
   return (
-    <AdminShell>
+    <>
       <section className="space-y-6">
         <PageHeader
           eyebrow="Store Setup"
@@ -265,6 +264,6 @@ export function StoreInformationClient() {
           </DialogContent>
         </Dialog>
       </section>
-    </AdminShell>
+    </>
   );
 }

@@ -42,6 +42,23 @@ const requiresAdminApiAuth = (request: NextRequest) => {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  if (pathname.startsWith("/admin/login")) {
+    const token = request.cookies.get(adminCookieName)?.value;
+
+    if (!token) {
+      return NextResponse.next();
+    }
+
+    try {
+      const payload = await verifyAdminToken(token);
+      return NextResponse.redirect(
+        new URL(payload.role === "STAFF" ? "/admin/products" : "/admin", request.url)
+      );
+    } catch {
+      return NextResponse.next();
+    }
+  }
+
   if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) {
     const token = request.cookies.get(adminCookieName)?.value;
 
