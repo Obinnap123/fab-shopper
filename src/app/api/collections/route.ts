@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 
@@ -15,11 +16,20 @@ export async function GET() {
     include: {
       _count: {
         select: { products: true }
+      },
+      products: {
+        where: { status: "PUBLISHED" },
+        select: { id: true }
       }
     }
   });
 
-  return NextResponse.json({ data: collections });
+  return NextResponse.json({
+    data: collections.map(({ products, ...collection }) => ({
+      ...collection,
+      publishedProductCount: products.length
+    }))
+  });
 }
 
 export async function POST(request: Request) {

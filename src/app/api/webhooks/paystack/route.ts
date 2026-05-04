@@ -1,16 +1,21 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
-import { getPaystackWebhookSecret } from "@/lib/paystack";
+import { finalizePaystackOrder } from "@/lib/paystack-order";
 
 export async function POST(request: Request) {
   try {
     const rawBody = await request.text();
     const signature = request.headers.get("x-paystack-signature");
-    const secret = getPaystackWebhookSecret();
+    const secret = process.env.PAYSTACK_WEBHOOK_SECRET;
 
-    if (!signature || !secret) {
-      return NextResponse.json({ error: "Missing signature or secret" }, { status: 400 });
+    if (!secret) {
+      console.warn("Paystack webhook secret is not configured. Skipping webhook verification in this environment.");
+      return NextResponse.json({ status: "ignored" });
+    }
+
+    if (!signature) {
+      return NextResponse.json({ error: "Missing signature" }, { status: 400 });
     }
 
     const hash = crypto.createHmac("sha512", secret).update(rawBody).digest("hex");
@@ -23,40 +28,19 @@ export async function POST(request: Request) {
 
     if (event.event === "charge.success") {
       const reference = event.data.reference;
-      const order = await prisma.order.findUnique({
-        where: { orderNumber: reference },
-        include: { items: true }
-      });
+      if (reference) {
+        const result = await finalizePaystackOrder(reference, event.data.id?.toString());
 
-      if (order && order.paymentStatus !== "PAID") {
-        await prisma.$transaction(async (tx) => {
-          await tx.order.update({
-            where: { id: order.id },
+        if (result.finalized) {
+          await (prisma as any).notification.create({
             data: {
-              paymentStatus: "PAID",
-              paystackRef: event.data.id?.toString(),
-              status: "PROCESSING"
+              title: `Payment confirmed for Order #${reference}`,
+              message: `Payment for order ${reference} has been verified successfully.`,
+              type: "ORDER",
+              link: `/admin/orders?id=${result.orderId}`
             }
           });
-
-          for (const item of order.items) {
-            await tx.product.update({
-              where: { id: item.productId },
-              data: {
-                stockQuantity: { decrement: item.quantity }
-              }
-            });
-
-            if (item.variantId) {
-              await tx.productVariant.update({
-                where: { id: item.variantId },
-                data: {
-                  stockQuantity: { decrement: item.quantity }
-                }
-              });
-            }
-          }
-        });
+        }
       }
     }
 

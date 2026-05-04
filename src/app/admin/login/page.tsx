@@ -1,7 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+import { PasswordInput } from "@/components/ui/password-input";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -62,12 +64,11 @@ export default function AdminLoginPage() {
             <label className="text-xs font-semibold uppercase tracking-[0.3em] text-forest">
               Password
             </label>
-            <input
-              type="password"
+            <PasswordInput
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               className="w-full rounded-2xl border border-forest/20 px-4 py-3 text-sm text-forest outline-none focus:border-forest"
-              placeholder="????????"
+              placeholder="••••••••"
               required
             />
           </div>

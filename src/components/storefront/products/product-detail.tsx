@@ -39,11 +39,14 @@ export function ProductDetail({ product }: { product: Product }) {
   const validDiscountedPrice = (typeof product.discountedPrice === 'number' && product.discountedPrice > 0) ? product.discountedPrice : null;
   const cartPrice = validDiscountedPrice ?? validPrice;
 
-  const sizes = useMemo(
-    () =>
-      Array.from(new Set(product.variants?.map((variant) => variant.size).filter(Boolean))) as string[],
-    [product.variants]
-  );
+  const sizes = useMemo(() => {
+    const normalized = product.variants
+      ?.map((variant) => variant.size?.trim() ?? "")
+      .filter((size) => size.length > 0)
+      .filter((size) => size.toLowerCase() !== "one size");
+
+    return Array.from(new Set(normalized ?? []));
+  }, [product.variants]);
   const colors = useMemo(
     () =>
       Array.from(new Set(product.variants?.map((variant) => variant.color).filter(Boolean))) as string[],

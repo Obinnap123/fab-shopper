@@ -80,7 +80,10 @@ export function CollectionsClient() {
       });
 
       if (!uploadRes.ok) throw new Error("Upload failed");
-      const { url } = await uploadRes.json();
+      const uploadJson = await uploadRes.json();
+      const url = uploadJson?.data?.[0]?.url;
+
+      if (!url) throw new Error("Invalid image URL returned");
 
       const patchRes = await fetch(`/api/collections/${colId}`, {
         method: "PATCH",

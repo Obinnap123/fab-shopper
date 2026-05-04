@@ -8,7 +8,9 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+
 import { PageSpacer } from "@/components/storefront/layout/page-spacer";
+import { PasswordInput } from "@/components/ui/password-input";
 
 const registerSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
@@ -36,21 +38,24 @@ function RegisterForm() {
         body: JSON.stringify(values),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Registration failed");
-      
+      if (!res.ok) {
+        throw new Error(data.error || "Registration failed");
+      }
+
       toast.success("Account created! Welcome to Fab Shopper.");
       const redirect = redirectParams || "/";
       router.push(redirect);
       router.refresh();
     } catch (err: any) {
+      setError(err.message || "Failed to register. Please try again.");
       toast.error(err.message || "Failed to register. Please try again.");
     }
   };
 
   return (
-    <div className="w-full max-w-lg mx-auto bg-white p-8 md:p-12 rounded-3xl shadow-[0_12px_40px_rgba(26,60,46,0.08)] border border-[rgba(26,60,46,0.05)]">
-      <div className="text-center mb-10">
-        <h1 className="text-3xl font-display italic text-[var(--brand-green)] mb-2">Create Account</h1>
+    <div className="mx-auto w-full max-w-lg rounded-3xl border border-[rgba(26,60,46,0.05)] bg-white p-8 shadow-[0_12px_40px_rgba(26,60,46,0.08)] md:p-12">
+      <div className="mb-10 text-center">
+        <h1 className="mb-2 text-3xl font-display italic text-[var(--brand-green)]">Create Account</h1>
         <p className="text-sm text-[var(--brand-green)]/60">Join the Fab Shopper community today.</p>
       </div>
 
@@ -60,7 +65,7 @@ function RegisterForm() {
             <label className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--brand-green)]/70">First Name</label>
             <input
               {...form.register("firstName")}
-              className="w-full h-12 px-4 rounded-xl border border-[var(--brand-green)]/20 focus:outline-none focus:border-[var(--brand-green)] focus:ring-1 focus:ring-[var(--brand-green)] bg-transparent transition-all"
+              className="h-12 w-full rounded-xl border border-[var(--brand-green)]/20 bg-transparent px-4 transition-all focus:border-[var(--brand-green)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-green)]"
               placeholder="Jane"
             />
             {form.formState.errors.firstName ? (
@@ -71,7 +76,7 @@ function RegisterForm() {
             <label className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--brand-green)]/70">Last Name</label>
             <input
               {...form.register("lastName")}
-              className="w-full h-12 px-4 rounded-xl border border-[var(--brand-green)]/20 focus:outline-none focus:border-[var(--brand-green)] focus:ring-1 focus:ring-[var(--brand-green)] bg-transparent transition-all"
+              className="h-12 w-full rounded-xl border border-[var(--brand-green)]/20 bg-transparent px-4 transition-all focus:border-[var(--brand-green)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-green)]"
               placeholder="Doe"
             />
             {form.formState.errors.lastName ? (
@@ -85,7 +90,7 @@ function RegisterForm() {
           <input
             {...form.register("email")}
             type="email"
-            className="w-full h-12 px-4 rounded-xl border border-[var(--brand-green)]/20 focus:outline-none focus:border-[var(--brand-green)] focus:ring-1 focus:ring-[var(--brand-green)] bg-transparent transition-all"
+            className="h-12 w-full rounded-xl border border-[var(--brand-green)]/20 bg-transparent px-4 transition-all focus:border-[var(--brand-green)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-green)]"
             placeholder="you@example.com"
           />
           {form.formState.errors.email ? (
@@ -95,10 +100,9 @@ function RegisterForm() {
 
         <div className="space-y-2">
           <label className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--brand-green)]/70">Password</label>
-          <input
+          <PasswordInput
             {...form.register("password")}
-            type="password"
-            className="w-full h-12 px-4 rounded-xl border border-[var(--brand-green)]/20 focus:outline-none focus:border-[var(--brand-green)] focus:ring-1 focus:ring-[var(--brand-green)] bg-transparent transition-all"
+            className="h-12 w-full rounded-xl border border-[var(--brand-green)]/20 bg-transparent px-4 transition-all focus:border-[var(--brand-green)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-green)]"
             placeholder="••••••••"
           />
           {form.formState.errors.password ? (
@@ -106,20 +110,22 @@ function RegisterForm() {
           ) : null}
         </div>
 
+        {error ? <p className="text-xs text-rose-500">{error}</p> : null}
+
         <button
           type="submit"
           disabled={form.formState.isSubmitting}
-          className="w-full h-12 mt-2 rounded-full bg-[var(--brand-green)] text-white font-semibold flex items-center justify-center hover:bg-[var(--brand-green)]/90 transition-colors disabled:opacity-70"
+          className="mt-2 flex h-12 w-full items-center justify-center rounded-full bg-[var(--brand-green)] font-semibold text-white transition-colors hover:bg-[var(--brand-green)]/90 disabled:opacity-70"
         >
-          {form.formState.isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign Up"}
+          {form.formState.isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Sign Up"}
         </button>
       </form>
 
       <div className="mt-8 text-center text-sm text-[var(--brand-green)]/60">
         Already have an account?{" "}
-        <Link 
-          href={redirectParams ? `/login?redirect=${encodeURIComponent(redirectParams)}` : `/login`} 
-          className="font-semibold text-[var(--brand-green)] hover:text-[var(--brand-gold)] transition-colors"
+        <Link
+          href={redirectParams ? `/login?redirect=${encodeURIComponent(redirectParams)}` : "/login"}
+          className="font-semibold text-[var(--brand-green)] transition-colors hover:text-[var(--brand-gold)]"
         >
           Sign In
         </Link>
@@ -132,7 +138,7 @@ export default function RegisterPage() {
   return (
     <main className="min-h-screen bg-[var(--brand-cream)] px-6 py-20 flex flex-col justify-center">
       <PageSpacer />
-      <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-[var(--brand-green)]" /></div>}>
+      <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-[var(--brand-green)]" /></div>}>
         <RegisterForm />
       </Suspense>
     </main>

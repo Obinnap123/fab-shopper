@@ -105,10 +105,15 @@ export default async function AdminDashboardPage() {
             <h1 className="text-2xl font-semibold text-forest">{greeting}, {adminName}</h1>
             <p className="text-sm text-forest/60">
               Share your storefront link today.
-              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-forest/5 px-3 py-1 text-forest/80">
-                https://fabshopper.com
+              <a
+                href="https://delightclosetrevolution.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-2 inline-flex items-center gap-1 rounded-full bg-forest/5 px-3 py-1 text-forest/80 hover:bg-forest/10"
+              >
+                delightclosetrevolution.com
                 <BadgeCheck className="h-4 w-4 text-gold" />
-              </span>
+              </a>
             </p>
           </div>
         </div>

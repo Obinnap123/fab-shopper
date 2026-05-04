@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -64,6 +64,8 @@ export function ProductsClient() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState(defaultFilters);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const searchParams = useSearchParams();
@@ -82,7 +84,7 @@ export function ProductsClient() {
   });
 
   const { data } = useQuery({
-    queryKey: ["products", search, filters],
+    queryKey: ["products", search, filters, page],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
@@ -92,10 +94,13 @@ export function ProductsClient() {
       if (filters.stock !== "all") params.set("stock", filters.stock);
       if (filters.minPrice) params.set("minPrice", filters.minPrice);
       if (filters.maxPrice) params.set("maxPrice", filters.maxPrice);
+      params.set("take", String(pageSize));
+      params.set("skip", String((page - 1) * pageSize));
 
       const json = await fetchJson<{ data: Product[]; total: number }>(`/api/products?${params.toString()}`);
       return json as { data: Product[]; total: number };
-    }
+    },
+    placeholderData: (previous) => previous
   });
 
   const mutation = useMutation({
@@ -151,9 +156,29 @@ export function ProductsClient() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [search, filters]);
+
   const products = data?.data ?? [];
   const total = data?.total ?? products.length;
   const collections = collectionsData ?? [];
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const pageNumbers = useMemo(() => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+    const start = Math.max(1, page - 2);
+    const end = Math.min(totalPages, start + 4);
+    const adjustedStart = Math.max(1, end - 4);
+    return Array.from({ length: end - adjustedStart + 1 }, (_, index) => adjustedStart + index);
+  }, [page, totalPages]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   return (
     <div className="space-y-6">
@@ -498,32 +523,44 @@ export function ProductsClient() {
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-forest/60">
         <div className="flex items-center gap-2">
           <span>Show</span>
-          <Select defaultValue="25">
+          <Select value="10" disabled>
             <SelectTrigger className="h-10 w-[90px] rounded-full text-xs font-semibold uppercase tracking-[0.2em]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="10">10</SelectItem>
-              <SelectItem value="25">25</SelectItem>
-              <SelectItem value="50">50</SelectItem>
             </SelectContent>
           </Select>
           <span>Entries</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled className="rounded-full">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            disabled={page <= 1}
+            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+          >
             Previous
           </Button>
-          <Button size="sm" className="rounded-full">
-            1
-          </Button>
-          <Button variant="outline" size="sm" className="rounded-full">
-            2
-          </Button>
-          <Button variant="outline" size="sm" className="rounded-full">
-            3
-          </Button>
-          <Button variant="outline" size="sm" className="rounded-full">
+          {pageNumbers.map((pageNumber) => (
+            <Button
+              key={pageNumber}
+              size="sm"
+              variant={pageNumber === page ? "default" : "outline"}
+              className="rounded-full"
+              onClick={() => setPage(pageNumber)}
+            >
+              {pageNumber}
+            </Button>
+          ))}
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            disabled={page >= totalPages}
+            onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+          >
             Next
           </Button>
         </div>

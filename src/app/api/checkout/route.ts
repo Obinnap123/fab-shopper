@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
+
 import { getCustomerSession } from "@/lib/customer-auth";
-import { getPaystackSecretKey } from "@/lib/paystack";
+import { prisma } from "@/lib/prisma";
 import { ALLOWED_SHIPPING_FEES, DEFAULT_SHIPPING_FEE } from "@/lib/shipping-options";
+import { calculateTotalWithVat, calculateVatAmount } from "@/lib/vat";
 
 const checkoutSchema = z.object({
   items: z.array(
@@ -34,7 +35,6 @@ export async function POST(request: Request) {
 
     const { items, shippingDetails } = parsedBody.data;
 
-    // Calculate total from DB to prevent tampering
     let subtotal = 0;
     const orderItems: {
       productId: string;
@@ -50,7 +50,10 @@ export async function POST(request: Request) {
         where: { id: item.productId },
         include: { variants: true }
       });
-      if (!dbProduct) throw new Error(`Product ${item.productId} not found`);
+
+      if (!dbProduct) {
+        throw new Error(`Product ${item.productId} not found`);
+      }
 
       if (dbProduct.status === "OUT_OF_STOCK") {
         throw new Error(`${dbProduct.name} is out of stock`);
@@ -89,14 +92,14 @@ export async function POST(request: Request) {
       });
     }
 
-    // Allow only known shipping fee options to prevent payload tampering
     const shippingFee = shippingDetails?.fee ?? DEFAULT_SHIPPING_FEE;
     if (!ALLOWED_SHIPPING_FEES.has(shippingFee)) {
       return NextResponse.json({ error: "Invalid shipping option selected" }, { status: 400 });
     }
-    const total = subtotal + shippingFee;
 
-    // Generate Order Number
+    const vatAmount = calculateVatAmount(subtotal);
+    const total = calculateTotalWithVat(subtotal, shippingFee);
+
     const orderNumber = `FAB-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
     const order = await prisma.order.create({
@@ -105,6 +108,7 @@ export async function POST(request: Request) {
         customerId: session.id,
         subtotal,
         shippingFee,
+        vatAmount,
         total,
         status: "PENDING",
         paymentStatus: "UNPAID",
@@ -115,47 +119,14 @@ export async function POST(request: Request) {
       }
     });
 
-    // Generate Notification for the Admin Dashboard
-    // Typecast to any locally to suppress TS error since Prisma lock prevented local type generation
-    await (prisma as any).notification.create({
-      data: {
-        title: `You have a New Order #${orderNumber.split('-').pop()}`,
-        message: `${session.firstName} ${session.lastName} purchased ${items.length} items worth ₦${total.toLocaleString()} from your website.`,
-        type: "ORDER",
-        link: `/admin/orders?id=${order.id}`
-      }
-    });
-
-    // Initialize Paystack
-    const paystackResponse = await fetch("https://api.paystack.co/transaction/initialize", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${getPaystackSecretKey()}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        email: session.email,
-        amount: Math.round(total * 100), // convert to kobo
-        reference: orderNumber,
-        callback_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/order-confirmation/${order.id}`,
-        metadata: {
-          orderId: order.id,
-          customerId: session.id
-        }
-      })
-    });
-
-    const paystackData = await paystackResponse.json();
-
-    if (!paystackData.status) {
-      throw new Error(paystackData.message || "Failed to initialize Paystack");
-    }
-
     return NextResponse.json({
-      authorization_url: paystackData.data.authorization_url,
-      reference: paystackData.data.reference
+      orderId: order.id,
+      orderNumber,
+      amountInKobo: Math.round(total * 100),
+      email: session.email,
+      firstName: session.firstName,
+      lastName: session.lastName
     });
-
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || "Failed to process checkout" },

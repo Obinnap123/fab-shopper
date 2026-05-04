@@ -73,7 +73,10 @@ export function CollectionsClient({ initialCollections }: { initialCollections: 
       });
 
       if (!uploadRes.ok) throw new Error("Upload failed");
-      const { url } = await uploadRes.json();
+      const uploadJson = await uploadRes.json();
+      const url = uploadJson?.data?.[0]?.url;
+
+      if (!url) throw new Error("Invalid image URL returned");
 
       // 2. Patch Collection with new Image URL
       const patchRes = await fetch(`/api/collections/${colId}`, {

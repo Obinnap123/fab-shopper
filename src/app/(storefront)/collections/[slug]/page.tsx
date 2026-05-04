@@ -62,17 +62,11 @@ async function getCollectionProducts(slug: string) {
 }
 
 export async function generateStaticParams() {
-  return [
-    { slug: 'new-arrivals' },
-    { slug: 'womens-shoes' },
-    { slug: 'mens-shoes' },
-    { slug: 'bags' },
-    { slug: 'clothing' },
-    { slug: 'perfumes' },
-    { slug: 'accessories' },
-    { slug: 'wristwatches' },
-    { slug: 'wristbands' },
-  ]
+  const collections = await prisma.collection.findMany({
+    select: { slug: true }
+  });
+
+  return collections.map((collection) => ({ slug: collection.slug }));
 }
 
 export default async function CollectionPage(props: CollectionPageProps) {

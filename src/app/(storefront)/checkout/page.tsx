@@ -3,26 +3,60 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+
 import { PageSpacer } from "@/components/storefront/layout/page-spacer";
-import { useCartStore } from "@/stores/cartStore";
 import { DEFAULT_SHIPPING_FEE, SHIPPING_OPTIONS } from "@/lib/shipping-options";
+import { calculateTotalWithVat, calculateVatAmount, VAT_RATE } from "@/lib/vat";
+import { useCartStore } from "@/stores/cartStore";
+
+type CheckoutInitResponse = {
+  orderId: string;
+  orderNumber: string;
+  amountInKobo: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+};
 
 export default function CheckoutView() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [shippingFee, setShippingFee] = useState(DEFAULT_SHIPPING_FEE);
-  const { items, total } = useCartStore();
+  const { items, total, clearCart } = useCartStore();
   const [error, setError] = useState<string | null>(null);
 
-  const cartTotal = total();
-  const finalTotal = cartTotal + shippingFee;
+  const subtotal = total();
+  const vatAmount = calculateVatAmount(subtotal);
+  const finalTotal = calculateTotalWithVat(subtotal, shippingFee);
+  const paystackPublicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
 
-  const handleDisplayTotal = (val: number) => `₦${val.toLocaleString()}`;
+  const handleDisplayTotal = (val: number) => `NGN ${val.toLocaleString()}`;
+
+  const verifyPayment = async (reference: string, orderId: string) => {
+    const res = await fetch("/api/paystack/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reference, orderId })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || "Payment verification failed");
+    }
+
+    return data as { verified: boolean; finalized: boolean; alreadyProcessed: boolean; orderId: string };
+  };
 
   const handleCheckout = async () => {
     if (items.length === 0) {
       setError("Your cart is empty");
       toast.error("Your cart is empty. Add an item before checkout.");
+      return;
+    }
+
+    if (!paystackPublicKey) {
+      setError("Missing Paystack public key");
+      toast.error("Paystack is not configured correctly.");
       return;
     }
 
@@ -39,14 +73,49 @@ export default function CheckoutView() {
         })
       });
 
-      const data = await res.json();
-      
+      const data = (await res.json()) as CheckoutInitResponse & { error?: string };
+
       if (!res.ok) {
         throw new Error(data.error || "Failed to initialize checkout");
       }
 
-      window.location.href = data.authorization_url;
+      const { default: PaystackPop } = await import("@paystack/inline-js");
+      const paystack = new PaystackPop();
 
+      paystack.newTransaction({
+        key: paystackPublicKey,
+        email: data.email,
+        amount: data.amountInKobo,
+        reference: data.orderNumber,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        metadata: {
+          orderId: data.orderId,
+          orderNumber: data.orderNumber
+        },
+        onSuccess: async (transaction: { reference?: string; trxref?: string }) => {
+          try {
+            const reference = transaction.reference || transaction.trxref || data.orderNumber;
+            await verifyPayment(reference, data.orderId);
+            clearCart();
+            window.location.href = `/order-confirmation/${data.orderId}`;
+          } catch (verificationError: any) {
+            const message = verificationError?.message || "Payment succeeded but verification failed.";
+            setError(message);
+            toast.error(message);
+            setLoading(false);
+          }
+        },
+        onCancel: () => {
+          setLoading(false);
+        },
+        onError: (err: { message?: string }) => {
+          const message = err?.message || "Couldn't open Paystack checkout.";
+          setError(message);
+          toast.error(message);
+          setLoading(false);
+        }
+      });
     } catch (err: any) {
       const message = err?.message || "Couldn't start checkout. Please try again.";
       setError(message);
@@ -66,7 +135,7 @@ export default function CheckoutView() {
         </div>
 
         {error && (
-          <div className="mb-6 rounded-xl bg-rose-50 p-4 text-sm text-rose-600 border border-rose-100 max-w-2xl mx-auto">
+          <div className="mb-6 rounded-xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-600 max-w-2xl mx-auto">
             {error}
           </div>
         )}
@@ -105,14 +174,14 @@ export default function CheckoutView() {
               <p className="font-semibold mb-2">Select your shipping rate:</p>
               {SHIPPING_OPTIONS.map((loc) => (
                 <label key={loc.label} className="flex items-center gap-3 cursor-pointer">
-                  <input 
-                    type="radio" 
-                    name="shipping" 
+                  <input
+                    type="radio"
+                    name="shipping"
                     className="accent-[var(--brand-green)]"
                     checked={shippingFee === loc.fee}
                     onChange={() => setShippingFee(loc.fee)}
                   />
-                  {loc.label} {loc.fee === 0 ? "(FREE)" : `- ₦${loc.fee.toLocaleString()}`}
+                  {loc.label} {loc.fee === 0 ? "(FREE)" : `- ${handleDisplayTotal(loc.fee)}`}
                 </label>
               ))}
             </div>
@@ -146,22 +215,26 @@ export default function CheckoutView() {
                 Go Back
               </button>
             </div>
-            
+
             <div className="rounded-xl border border-[rgba(26,60,46,0.15)] bg-white p-6 shadow-sm">
               <h3 className="font-semibold text-[var(--brand-green)] mb-4">Order Summary</h3>
               <div className="space-y-4 mb-6 max-h-48 overflow-auto">
                 {items.map((item) => (
                   <div key={`${item.id}-${item.size}`} className="flex justify-between text-sm text-[var(--brand-green)]/80">
-                    <span className="truncate pr-4">{item.quantity}x {item.name} {item.size ? `(${item.size})` : ''}</span>
+                    <span className="truncate pr-4">{item.quantity}x {item.name} {item.size ? `(${item.size})` : ""}</span>
                     <span className="shrink-0">{handleDisplayTotal(item.price * item.quantity)}</span>
                   </div>
                 ))}
               </div>
-              
+
               <div className="space-y-2 border-t border-[rgba(26,60,46,0.1)] pt-4 text-sm text-[var(--brand-green)]/80">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span>{handleDisplayTotal(cartTotal)}</span>
+                  <span>{handleDisplayTotal(subtotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>VAT ({VAT_RATE * 100}%)</span>
+                  <span>{handleDisplayTotal(vatAmount)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping</span>
@@ -174,12 +247,12 @@ export default function CheckoutView() {
               </div>
             </div>
 
-            <button 
+            <button
               onClick={handleCheckout}
               disabled={loading || items.length === 0}
               className="h-14 w-full rounded-full bg-[var(--brand-green)] text-[13px] font-semibold uppercase tracking-[0.12em] text-white flex items-center justify-center hover:bg-[var(--brand-green)]/90 transition-colors disabled:opacity-70"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `Pay with Paystack`}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Pay with Paystack"}
             </button>
             <p className="text-center text-xs text-[var(--brand-green)]/50 mt-4">Secured payment powered by Paystack</p>
           </div>

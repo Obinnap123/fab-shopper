@@ -5,10 +5,14 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 
+import { calculateVatAmount, VAT_RATE } from "@/lib/vat";
 import { useCartStore } from "@/stores/cartStore";
 
 export function CartDrawer() {
   const { isOpen, closeCart, items, total, itemCount, updateQuantity, removeItem } = useCartStore();
+  const subtotal = total();
+  const vatAmount = calculateVatAmount(subtotal);
+  const estimatedTotal = subtotal + vatAmount;
 
   return (
     <AnimatePresence>
@@ -91,20 +95,20 @@ export function CartDrawer() {
                 <div className="space-y-3 text-sm text-[var(--text-muted)]">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span>₦{total().toLocaleString()}</span>
+                    <span>₦{subtotal.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Shipping</span>
                     <span>Calculated at checkout</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>VAT (7.5%)</span>
-                    <span>₦{Math.round(total() * 0.075).toLocaleString()}</span>
+                    <span>VAT ({VAT_RATE * 100}%)</span>
+                    <span>₦{vatAmount.toLocaleString()}</span>
                   </div>
                 </div>
                 <div className="mt-4 flex items-center justify-between border-t border-[rgba(26,60,46,0.1)] pt-4 text-sm font-semibold text-[var(--brand-green)]">
                   <span>Estimated Total</span>
-                  <span>₦{Math.round(total() * 1.075).toLocaleString()}</span>
+                  <span>₦{estimatedTotal.toLocaleString()}</span>
                 </div>
                 <Link
                   href="/checkout"

@@ -14,17 +14,17 @@ export async function GET(
     const collection = await prisma.collection.findUnique({
       where: { slug: slug }
     })
-    
+
     if (!collection) {
       // Return a graceful response even if not in DB
-      return NextResponse.json({ 
-        name: slug.split('-').map(w => 
+      return NextResponse.json({
+        name: slug.split('-').map(w =>
           w.charAt(0).toUpperCase() + w.slice(1)
         ).join(' '),
-        slug: slug 
+        slug: slug
       })
     }
-    
+
     return NextResponse.json(collection)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch collection' }, { status: 500 })
@@ -42,7 +42,7 @@ export async function PATCH(
 ) {
   const params = await props.params;
   const idValue = params.slug; // Passed as ID from the frontend Admin client
-  
+
   const body = await request.json().catch(() => null);
   const parsed = updateSchema.safeParse(body);
 
@@ -51,7 +51,7 @@ export async function PATCH(
   }
 
   const { name, image } = parsed.data;
-  
+
   const updateData: any = {};
   if (name !== undefined) {
     updateData.name = name;

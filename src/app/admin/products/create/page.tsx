@@ -298,7 +298,7 @@ export default function CreateProductPage() {
                 <SelectTrigger className="h-11 rounded-2xl">
                   <SelectValue placeholder="Select collection" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent portal={false} position="item-aligned" sideOffset={4}>
                   <SelectItem value="none">No collection</SelectItem>
                   {collections.map((collection) => (
                     <SelectItem key={collection.id} value={collection.id}>
@@ -597,7 +597,6 @@ export default function CreateProductPage() {
     </AdminShell>
   );
 }
-
 
 
 
