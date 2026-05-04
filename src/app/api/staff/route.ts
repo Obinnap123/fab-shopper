@@ -2,11 +2,11 @@
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { requireSuperAdmin } from "@/lib/admin-auth";
 
 const staffSchema = z.object({
   name: z.string().min(2),
-  email: z.string().email(),
-  role: z.enum(["SUPER_ADMIN", "STAFF"]).default("STAFF")
+  email: z.string().email()
 });
 
 const generatePassword = () => {
@@ -19,14 +19,24 @@ const generatePassword = () => {
 };
 
 export async function GET() {
+  const admin = await requireSuperAdmin();
+  if (!admin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const staff = await prisma.admin.findMany({
     orderBy: { createdAt: "desc" },
-    select: { id: true, name: true, email: true, role: true, createdAt: true }
+    select: { id: true, name: true, email: true, role: true, lastLoginAt: true, createdAt: true }
   });
   return NextResponse.json({ data: staff });
 }
 
 export async function POST(request: Request) {
+  const admin = await requireSuperAdmin();
+  if (!admin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const body = await request.json().catch(() => null);
   const parsed = staffSchema.safeParse(body);
 
@@ -46,7 +56,7 @@ export async function POST(request: Request) {
     data: {
       name: parsed.data.name,
       email: parsed.data.email,
-      role: parsed.data.role,
+      role: "STAFF",
       password: hashedPassword
     }
   });

@@ -24,11 +24,17 @@ async function main() {
   }
 
   console.log("Seeding Super Admin...");
-  const adminEmail = "delightclosetrevolution@gmail.com";
+  const adminEmail = process.env.SEED_ADMIN_EMAIL;
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+
+  if (!adminEmail || !adminPassword) {
+    throw new Error("SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD are required to seed the super admin.");
+  }
+
   const exists = await prisma.admin.findUnique({ where: { email: adminEmail } });
   
   if (!exists) {
-    const hashedPassword = await bcrypt.hash("DelightAdmin2026!", 12);
+    const hashedPassword = await bcrypt.hash(adminPassword, 12);
     await prisma.admin.create({
       data: {
         email: adminEmail,
@@ -37,7 +43,7 @@ async function main() {
         role: "SUPER_ADMIN"
       }
     });
-    console.log("Created Super Admin: delightclosetrevolution@gmail.com / DelightAdmin2026!");
+    console.log(`Created Super Admin: ${adminEmail}`);
   } else {
     await prisma.admin.update({
       where: { email: adminEmail },

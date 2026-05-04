@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -28,17 +27,12 @@ type StorefrontCollection = {
   publishedProductCount?: number;
 };
 
-export function CategoryShowcase() {
-  const sectionRef = useRef<HTMLDivElement | null>(null);
+type CategoryShowcaseProps = {
+  collections: StorefrontCollection[];
+};
 
-  const { data: dbCollections = [] } = useQuery<StorefrontCollection[]>({
-    queryKey: ["collections-showcase"],
-    queryFn: async () => {
-      const res = await fetch("/api/collections");
-      const json = await res.json();
-      return json.data || [];
-    }
-  });
+export function CategoryShowcase({ collections }: CategoryShowcaseProps) {
+  const sectionRef = useRef<HTMLDivElement | null>(null);
 
   const fallbackImages: Record<string, string> = {
     "women's shoes": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800",
@@ -50,7 +44,7 @@ export function CategoryShowcase() {
     "new arrivals": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800"
   };
 
-  const publishedCollections = dbCollections
+  const publishedCollections = collections
     .filter((collection) => (collection.publishedProductCount ?? 0) > 0)
     .map((collection) => ({
       name: collection.name,

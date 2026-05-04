@@ -1,15 +1,11 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { verifyAdminToken, adminCookieName } from "@/lib/auth";
+import { getAdminSession } from "@/lib/admin-auth";
 
 export async function getAdminRole() {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(adminCookieName)?.value;
-    if (!token) return null;
-    const payload = await verifyAdminToken(token);
-    return payload?.role;
+    const admin = await getAdminSession();
+    return admin?.role ?? null;
   } catch (error) {
     return null;
   }

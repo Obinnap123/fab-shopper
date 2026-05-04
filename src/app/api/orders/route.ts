@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   const take = Number(searchParams.get("take") ?? 20);
   const skip = Number(searchParams.get("skip") ?? 0);
   const search = searchParams.get("search")?.trim();
-  const dateRange = searchParams.get("dateRange") ?? "this-month";
+  const dateRange = searchParams.get("dateRange") ?? "all";
   const delivery = searchParams.get("delivery") ?? "all";
 
   const where: Record<string, unknown> = {};

@@ -10,6 +10,7 @@ import {
   ChevronDown,
   CreditCard,
   LayoutGrid,
+  LogOut,
   Package,
   Settings,
   Truck,
@@ -74,6 +75,7 @@ type AdminSidebarProps = {
 export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
   const pathname = usePathname();
   const [role, setRole] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     getAdminRole().then(setRole);
@@ -81,8 +83,8 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
 
   const navSections = useMemo(() => {
     if (role === "STAFF") {
-      return ALL_SECTIONS.filter(
-        (s) => !["Analytics", "Finance", "Store Setup"].includes(s.title)
+      return ALL_SECTIONS.filter((section) =>
+        ["Products", "Orders", "Customers", "Store Setup"].includes(section.title)
       );
     }
     return ALL_SECTIONS;
@@ -109,15 +111,26 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
     setOpenSections((prev) => ({ ...prev, [title]: !prev[title] }));
   };
 
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      window.location.href = "/admin/login";
+    }
+  };
+
   return (
     <aside className="flex h-full min-h-0 w-full max-w-[260px] flex-col bg-forest text-cream">
       <div className="hidden px-4 py-8 sm:px-6 lg:px-10 lg:block">
         <p className="text-[10px] uppercase tracking-[0.4em] text-gold/80">
           Fab Shopper
         </p>
-        <h2 className="mt-2 text-2xl font-serif font-semibold text-cream">Admin</h2>
+        <h2 className="mt-2 text-2xl font-serif font-semibold text-cream">
+          {role === "STAFF" ? "Staff" : "Admin"}
+        </h2>
       </div>
-      <nav className="flex-1 min-h-0 space-y-6 overflow-y-auto px-4 pb-10 pt-4 scrollbar-hide overscroll-contain md:pt-0">
+      <nav className="flex-1 min-h-0 space-y-6 overflow-y-auto px-4 pb-6 pt-4 scrollbar-hide overscroll-contain md:pt-0">
         {navSections.map((section) => {
           const Icon = section.icon;
           const isActive = section.href
@@ -223,6 +236,17 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
           );
         })}
       </nav>
+      <div className="shrink-0 border-t border-cream/10 px-4 py-4">
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={loggingOut}
+          className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-cream/80 transition hover:bg-cream/10 hover:text-cream disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <LogOut className="h-4 w-4 text-gold" />
+          {loggingOut ? "Logging out..." : "Logout"}
+        </button>
+      </div>
     </aside>
   );
 }

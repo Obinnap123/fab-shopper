@@ -14,13 +14,11 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const staffSchema = z.object({
   name: z.string().min(2, "Enter a full name"),
-  email: z.string().email("Enter a valid email"),
-  role: z.enum(["SUPER_ADMIN", "STAFF"])
+  email: z.string().email("Enter a valid email")
 });
 
 type StaffForm = z.infer<typeof staffSchema>;
@@ -30,7 +28,16 @@ type StaffMember = {
   name: string;
   email: string;
   role: "SUPER_ADMIN" | "STAFF";
+  lastLoginAt: string | null;
   createdAt: string;
+};
+
+const formatDateTime = (value: string | null) => {
+  if (!value) return "Never";
+  return new Intl.DateTimeFormat("en-NG", {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(new Date(value));
 };
 
 export function StaffClient() {
@@ -38,11 +45,10 @@ export function StaffClient() {
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const slotLimit = 5;
 
   const form = useForm<StaffForm>({
     resolver: zodResolver(staffSchema),
-    defaultValues: { name: "", email: "", role: "STAFF" }
+    defaultValues: { name: "", email: "" }
   });
 
   const { data, isLoading } = useQuery({
@@ -70,7 +76,7 @@ export function StaffClient() {
     onSuccess: async (payload) => {
       setTempPassword(payload.tempPassword);
       setErrorMessage(null);
-      form.reset({ name: "", email: "", role: "STAFF" });
+      form.reset({ name: "", email: "" });
       await queryClient.invalidateQueries({ queryKey: ["staff"] });
     },
     onError: (error) => {
@@ -80,7 +86,6 @@ export function StaffClient() {
   });
 
   const staff = data ?? [];
-  const slotsRemaining = Math.max(slotLimit - staff.length, 0);
 
   return (
     <AdminShell>
@@ -96,15 +101,6 @@ export function StaffClient() {
             </Button>
           }
         />
-
-        <SectionCard title="Available Slots" subtitle="Staff capacity overview">
-          <div className="flex items-center gap-3 text-sm text-forest/70">
-            <span className="rounded-full bg-forest/10 px-3 py-1 text-xs font-semibold text-forest">
-              {staff.length}/{slotLimit} used
-            </span>
-            <span>{slotsRemaining} slots remaining</span>
-          </div>
-        </SectionCard>
 
         <SectionCard title="Staff Directory">
           <div className="overflow-hidden rounded-2xl border border-forest/10">
@@ -130,7 +126,7 @@ export function StaffClient() {
                       <TableCell>{new Date(member.createdAt).toLocaleDateString("en-NG")}</TableCell>
                       <TableCell className="font-semibold text-forest">{member.name}</TableCell>
                       <TableCell>{member.role === "SUPER_ADMIN" ? "Admin" : "Staff"}</TableCell>
-                      <TableCell>—</TableCell>
+                      <TableCell>{formatDateTime(member.lastLoginAt)}</TableCell>
                     </TableRow>
                   ))
                 ) : (
@@ -160,7 +156,7 @@ export function StaffClient() {
               <DialogTitle>Add New Staff</DialogTitle>
             </DialogHeader>
             <form
-              className="mt-6 grid gap-4 md:grid-cols-2"
+              className="mt-6 grid gap-4 md:grid-cols-[1fr_1fr_auto]"
               onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
             >
               <div className="space-y-2">
@@ -176,21 +172,6 @@ export function StaffClient() {
                 {form.formState.errors.email ? (
                   <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>
                 ) : null}
-              </div>
-              <div className="space-y-2">
-                <Label>Role</Label>
-                <Select
-                  value={form.watch("role")}
-                  onValueChange={(value) => form.setValue("role", value as StaffForm["role"])}
-                >
-                  <SelectTrigger className="h-11 rounded-2xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="SUPER_ADMIN">Admin</SelectItem>
-                    <SelectItem value="STAFF">Staff</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               <div className="flex items-end">
                 <Button

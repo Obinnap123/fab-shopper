@@ -29,6 +29,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 
+  const loggedInAt = new Date();
+  await prisma.admin.update({
+    where: { id: admin.id },
+    data: { lastLoginAt: loggedInAt }
+  });
+
   const token = await signAdminToken({
     id: admin.id,
     email: admin.email,

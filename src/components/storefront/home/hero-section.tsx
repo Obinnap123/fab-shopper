@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion } from "framer-motion"
@@ -37,29 +36,26 @@ export function HeroSection() {
       }}
     >
       <Image
-        src="https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1800&q=85"
-        alt="Fab Shopper — Delight Closet Revolution"
+        src="/images/hero-shopping-illustration.jpeg"
+        alt="Fab Shopper - Delight Closet Revolution"
         fill
         priority
         quality={85}
-        style={{ objectFit: "cover", objectPosition: "center top" }}
+        style={{ objectFit: "cover", objectPosition: "center" }}
         sizes="100vw"
       />
 
-      {/* 
-        Single sleek gradient overlay matching shoptobiri.com details
-        (Transitioning strictly from dark bottom to transparent middle) 
-      */}
+      {/* Soft brand overlay keeps the illustration visible while grounding the text. */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          background: "linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.15) 30%, transparent 100%)",
+          background:
+            "linear-gradient(90deg, rgba(15,36,25,0.74) 0%, rgba(15,36,25,0.42) 38%, rgba(250,247,242,0.18) 100%)",
         }}
       />
 
-      {/* Optional very-light dim overall to guarantee high contrast across all devices */}
-      <div className="absolute inset-0 bg-black/10" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_45%,rgba(250,247,242,0.18),transparent_42%)]" />
 
       {/* HERO CONTENT - Positioned to share absolute exact padded axis with Navbar */}
       <motion.div
@@ -70,16 +66,16 @@ export function HeroSection() {
       >
         <motion.p
           variants={itemVariants}
-          className="font-body text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--brand-gold)] mb-4 opacity-90"
+          className="font-body mb-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--brand-gold)] opacity-90"
         >
-          New Collection · 2025
+          New Collection - 2025
         </motion.p>
 
         <motion.h1
           variants={itemVariants}
           className="font-display italic text-white"
           style={{
-            fontSize: "clamp(56px, 7vw, 96px)", 
+            fontSize: "clamp(56px, 7vw, 96px)",
             fontWeight: 400,
             lineHeight: 0.92,
             marginBottom: "16px",
@@ -99,21 +95,21 @@ export function HeroSection() {
         >
           <p className="font-body text-[15px] leading-[1.6] text-white/75 sm:max-w-[400px]">
             Premium fashion, curated for you. Designer shoes, bags, clothing and
-            accessories — delivered to your door in Lagos.
+            accessories - delivered to your door in Lagos.
           </p>
 
           {/* CTA Buttons - Refined minimal aesthetic */}
           <div className="flex shrink-0 gap-4">
             <Link
               href="/shop"
-              className="inline-flex items-center rounded bg-white px-8 py-3.5 font-body text-[12px] font-bold uppercase tracking-[0.1em] text-black transition-transform hover:-translate-y-0.5"
+              className="font-body inline-flex items-center rounded bg-white px-8 py-3.5 text-[12px] font-bold uppercase tracking-[0.1em] text-black transition-transform hover:-translate-y-0.5"
             >
               Shop Now
             </Link>
 
             <Link
               href="/collections/new-arrivals"
-              className="inline-flex items-center rounded border border-white/50 bg-transparent px-8 py-3.5 font-body text-[12px] font-medium uppercase tracking-[0.1em] text-white transition-all hover:-translate-y-0.5 hover:border-white hover:bg-white/10"
+              className="font-body inline-flex items-center rounded border border-white/50 bg-transparent px-8 py-3.5 text-[12px] font-medium uppercase tracking-[0.1em] text-white transition-all hover:-translate-y-0.5 hover:border-white hover:bg-white/10"
             >
               Discover
             </Link>
@@ -128,7 +124,7 @@ export function HeroSection() {
         transition={{ delay: 1.5, duration: 0.6 }}
         className="absolute bottom-[24px] left-1/2 flex -translate-x-1/2 flex-col items-center gap-[6px]"
       >
-        <p className="font-body text-[9px] uppercase tracking-[0.2em] text-white/50 m-0">
+        <p className="font-body m-0 text-[9px] uppercase tracking-[0.2em] text-white/50">
           Scroll
         </p>
         <div className="relative h-[40px] w-[1px] overflow-hidden bg-white/20">

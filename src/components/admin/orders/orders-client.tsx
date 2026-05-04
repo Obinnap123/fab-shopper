@@ -61,7 +61,7 @@ export function OrdersClient() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [dateRange, setDateRange] = useState("this-month");
+  const [dateRange, setDateRange] = useState("all");
   const [deliveryFilter, setDeliveryFilter] = useState<"all" | "delivery" | "pickup">("all");
   const [customerQuery, setCustomerQuery] = useState("");
   const [productQuery, setProductQuery] = useState("");
@@ -625,6 +625,7 @@ export function OrdersClient() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
                 <SelectItem value="this-month">This Month</SelectItem>
                 <SelectItem value="last-month">Last Month</SelectItem>
                 <SelectItem value="last-3">Last 3 Months</SelectItem>
