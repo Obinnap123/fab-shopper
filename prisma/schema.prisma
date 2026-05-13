@@ -133,9 +133,11 @@ model Customer {
   billingAddressId       String?   @unique
   billingAddress         Address?  @relation("BillingAddress", fields: [billingAddressId], references: [id])
   orders                 Order[]
+  notifications          CustomerNotification[]
   subscribedToNewsletter Boolean   @default(false)
   welcomeEmailSent       Boolean   @default(false)
   createdAt              DateTime  @default(now())
+  deletedAt              DateTime?
 }
 
 model Address {
@@ -237,6 +239,21 @@ model Notification {
   isRead    Boolean          @default(false)
   link      String?
   createdAt DateTime         @default(now())
+}
+
+model CustomerNotification {
+  id           String           @id @default(cuid())
+  customer     Customer         @relation(fields: [customerId], references: [id])
+  customerId   String
+  title        String
+  message      String
+  type         NotificationType @default(SYSTEM)
+  isRead       Boolean          @default(false)
+  link         String?
+  referenceKey String?          @unique
+  createdAt    DateTime         @default(now())
+
+  @@index([customerId, isRead, createdAt])
 }
 
 model StoreVisit {

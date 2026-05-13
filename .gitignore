@@ -11,3 +11,5 @@ coverage
 
 # TypeScript build artifacts
 tsconfig.tsbuildinfo
+.vercel
+.env*.local

@@ -12,13 +12,35 @@ export type CustomerSession = {
   email: string;
 };
 
-export async function signCustomerToken(payload: CustomerSession) {
+type CustomerSessionSource = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+};
+
+export function toCustomerSession(payload: CustomerSessionSource): CustomerSession {
+  if (!payload.email) {
+    throw new Error("Customer session requires an email address");
+  }
+
+  return {
+    id: payload.id,
+    firstName: payload.firstName,
+    lastName: payload.lastName,
+    email: payload.email
+  };
+}
+
+export async function createCustomerSessionToken(payload: CustomerSession) {
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("30d")
     .sign(key);
 }
+
+export const signCustomerToken = createCustomerSessionToken;
 
 export async function verifyCustomerToken(
   token: string

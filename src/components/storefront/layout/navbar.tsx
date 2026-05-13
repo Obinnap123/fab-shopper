@@ -62,6 +62,21 @@ export function Navbar() {
     }
   });
 
+  const { data: customerSession } = useQuery({
+    queryKey: ["customer-session"],
+    queryFn: async () => {
+      const res = await fetch("/api/customer-auth/session");
+      const json = await res.json();
+      return json.data as {
+        id: string
+        firstName: string
+        lastName: string
+        email: string | null
+        unreadNotifications: number
+      } | null;
+    }
+  });
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (searchQuery.trim()) {
@@ -241,8 +256,13 @@ export function Navbar() {
             </button>
 
             {/* User Account */}
-            <Link href="/login" className="hidden xl:flex hover:text-[var(--brand-gold)] transition-colors" aria-label="Account">
+            <Link href={customerSession ? "/account" : "/login"} className="hidden xl:flex hover:text-[var(--brand-gold)] transition-colors relative" aria-label="Account">
               <User className="w-[18px] h-[18px]" strokeWidth={1.25} />
+              {customerSession?.unreadNotifications ? (
+                <span className="absolute -top-1.5 -right-2 flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-[var(--brand-gold)] px-1 text-[8px] font-bold text-white shadow-sm">
+                  {customerSession.unreadNotifications}
+                </span>
+              ) : null}
             </Link>
 
             {/* Wishlist */}
@@ -414,8 +434,15 @@ export function Navbar() {
               
               <div className="mt-auto p-8 bg-[rgba(26,60,46,0.03)] border-t border-[rgba(26,60,46,0.1)]">
                 <div className="flex flex-col gap-4">
-                  <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-[14px] uppercase tracking-[0.06em] text-[var(--brand-green)] hover:text-[var(--brand-gold)] transition-colors">
-                    <User className="w-5 h-5" strokeWidth={1.25} /> Account
+                  <Link href={customerSession ? "/account" : "/login"} onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-between gap-3 text-[14px] uppercase tracking-[0.06em] text-[var(--brand-green)] hover:text-[var(--brand-gold)] transition-colors">
+                    <span className="flex items-center gap-3">
+                      <User className="w-5 h-5" strokeWidth={1.25} /> {customerSession ? "My Account" : "Account"}
+                    </span>
+                    {customerSession?.unreadNotifications ? (
+                      <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--brand-gold)] px-2 text-[10px] font-bold text-white shadow-sm">
+                        {customerSession.unreadNotifications}
+                      </span>
+                    ) : null}
                   </Link>
                   <Link href="/wishlist" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-between text-[14px] uppercase tracking-[0.06em] text-[var(--brand-green)] hover:text-[var(--brand-gold)] transition-colors">
                     <div className="flex items-center gap-3">

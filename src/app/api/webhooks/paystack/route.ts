@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { finalizePaystackOrder } from "@/lib/paystack-order";
+import { createCustomerNotification } from "@/lib/customer-notifications";
 
 export async function POST(request: Request) {
   try {
@@ -40,6 +41,22 @@ export async function POST(request: Request) {
               link: `/admin/orders?id=${result.orderId}`
             }
           });
+
+          const order = await prisma.order.findUnique({
+            where: { id: result.orderId },
+            select: { customerId: true, orderNumber: true }
+          });
+
+          if (order) {
+            await createCustomerNotification({
+              customerId: order.customerId,
+              title: `Payment confirmed for ${order.orderNumber}`,
+              message: "Your payment has been received successfully. We will keep you posted as your order moves forward.",
+              type: "PAYMENT",
+              link: "/account",
+              referenceKey: `payment-confirmed-${order.orderNumber}`
+            });
+          }
         }
       }
     }

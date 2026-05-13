@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getPaystackSecretKey } from "@/lib/paystack";
 import { finalizePaystackOrder } from "@/lib/paystack-order";
+import { createCustomerNotification } from "@/lib/customer-notifications";
 
 const verifySchema = z.object({
   reference: z.string().min(1),
@@ -72,6 +73,15 @@ export async function POST(request: Request) {
           type: "ORDER",
           link: `/admin/orders?id=${order.id}`
         }
+      });
+
+      await createCustomerNotification({
+        customerId: order.customerId,
+        title: `Payment confirmed for ${reference}`,
+        message: "We have confirmed your Paystack payment and your order is now being prepared.",
+        type: "PAYMENT",
+        link: "/account",
+        referenceKey: `payment-confirmed-${reference}`
       });
     }
 

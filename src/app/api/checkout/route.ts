@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getCustomerSession } from "@/lib/customer-auth";
+import { createCustomerNotification } from "@/lib/customer-notifications";
+import { getPaystackPublicKey } from "@/lib/paystack";
 import { prisma } from "@/lib/prisma";
 import { ALLOWED_SHIPPING_FEES, DEFAULT_SHIPPING_FEE } from "@/lib/shipping-options";
 import { calculateTotalWithVat, calculateVatAmount } from "@/lib/vat";
@@ -119,13 +121,23 @@ export async function POST(request: Request) {
       }
     });
 
+    await createCustomerNotification({
+      customerId: session.id,
+      title: `Order ${orderNumber} created`,
+      message: "Your order has been created and is waiting for payment confirmation.",
+      type: "ORDER",
+      link: "/account",
+      referenceKey: `order-created-${order.id}`
+    });
+
     return NextResponse.json({
       orderId: order.id,
       orderNumber,
       amountInKobo: Math.round(total * 100),
       email: session.email,
       firstName: session.firstName,
-      lastName: session.lastName
+      lastName: session.lastName,
+      paystackPublicKey: getPaystackPublicKey()
     });
   } catch (error: any) {
     return NextResponse.json(

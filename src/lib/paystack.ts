@@ -5,7 +5,7 @@ export function getPaystackSecretKey() {
 }
 
 export function getPaystackPublicKey() {
-  return requiredEnv("NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY");
+  return process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || process.env.PAYSTACK_PUBLIC_KEY || requiredEnv("NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY");
 }
 
 export function getPaystackWebhookSecret() {

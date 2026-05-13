@@ -1,23 +1,17 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageSpacer } from "@/components/storefront/layout/page-spacer";
 import { PasswordInput } from "@/components/ui/password-input";
-
-const registerSchema = z.object({
-  firstName: z.string().min(2, "First name must be at least 2 characters"),
-  lastName: z.string().min(2, "Last name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-});
+import { registerCustomerRequest } from "@/features/customer-auth/client";
+import { registerSchema, type RegisterInput } from "@/features/customer-auth/schemas";
 
 function RegisterForm() {
   const router = useRouter();
@@ -25,30 +19,23 @@ function RegisterForm() {
   const redirectParams = searchParams.get("redirect");
   const [error, setError] = useState<string | null>(null);
 
-  const form = useForm({
+  const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
     defaultValues: { firstName: "", lastName: "", email: "", password: "" }
   });
 
-  const onSubmit = async (values: z.infer<typeof registerSchema>) => {
+  const onSubmit = async (values: RegisterInput) => {
     try {
-      const res = await fetch("/api/customer-auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Registration failed");
-      }
+      setError(null);
+      await registerCustomerRequest(values);
 
       toast.success("Account created! Welcome to Fab Shopper.");
-      const redirect = redirectParams || "/";
-      router.push(redirect);
+      router.push(redirectParams || "/account");
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || "Failed to register. Please try again.");
-      toast.error(err.message || "Failed to register. Please try again.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to register. Please try again.";
+      setError(message);
+      toast.error(message);
     }
   };
 
@@ -102,7 +89,7 @@ function RegisterForm() {
           <label className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--brand-green)]/70">Password</label>
           <PasswordInput
             {...form.register("password")}
-            className="h-12 w-full rounded-xl border border-[var(--brand-green)]/20 bg-transparent px-4 transition-all focus:border-[var(--brand-green)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-green)]"
+            className="h-12 rounded-xl border border-[var(--brand-green)]/20 bg-transparent px-4 transition-all focus:border-[var(--brand-green)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-green)]"
             placeholder="••••••••"
           />
           {form.formState.errors.password ? (

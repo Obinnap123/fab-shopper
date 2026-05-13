@@ -16,6 +16,7 @@ type CheckoutInitResponse = {
   email: string;
   firstName: string;
   lastName: string;
+  paystackPublicKey: string;
 };
 
 export default function CheckoutView() {
@@ -28,7 +29,6 @@ export default function CheckoutView() {
   const subtotal = total();
   const vatAmount = calculateVatAmount(subtotal);
   const finalTotal = calculateTotalWithVat(subtotal, shippingFee);
-  const paystackPublicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
 
   const handleDisplayTotal = (val: number) => `NGN ${val.toLocaleString()}`;
 
@@ -54,12 +54,6 @@ export default function CheckoutView() {
       return;
     }
 
-    if (!paystackPublicKey) {
-      setError("Missing Paystack public key");
-      toast.error("Paystack is not configured correctly.");
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
@@ -79,11 +73,15 @@ export default function CheckoutView() {
         throw new Error(data.error || "Failed to initialize checkout");
       }
 
+      if (!data.paystackPublicKey) {
+        throw new Error("Missing Paystack public key");
+      }
+
       const { default: PaystackPop } = await import("@paystack/inline-js");
       const paystack = new PaystackPop();
 
       paystack.newTransaction({
-        key: paystackPublicKey,
+        key: data.paystackPublicKey,
         email: data.email,
         amount: data.amountInKobo,
         reference: data.orderNumber,

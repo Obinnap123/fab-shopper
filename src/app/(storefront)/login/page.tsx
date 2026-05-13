@@ -1,21 +1,16 @@
 "use client";
 
-import { useState, Suspense } from "react";
-import Link from "next/link";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageSpacer } from "@/components/storefront/layout/page-spacer";
 import { PasswordInput } from "@/components/ui/password-input";
-
-const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email"),
-  password: z.string().min(1, "Password is required"),
-});
+import { loginCustomerRequest } from "@/features/customer-auth/client";
+import { loginSchema, type LoginInput } from "@/features/customer-auth/schemas";
 
 function LoginForm() {
   const router = useRouter();
@@ -23,30 +18,23 @@ function LoginForm() {
   const redirectParams = searchParams.get("redirect");
   const [error, setError] = useState<string | null>(null);
 
-  const form = useForm({
+  const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" }
   });
 
-  const onSubmit = async (values: z.infer<typeof loginSchema>) => {
+  const onSubmit = async (values: LoginInput) => {
     try {
-      const res = await fetch("/api/customer-auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Login failed");
-      }
+      setError(null);
+      await loginCustomerRequest(values);
 
       toast.success("Welcome back to Fab Shopper!");
-      const redirect = redirectParams || "/";
-      router.push(redirect);
+      router.push(redirectParams || "/account");
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || "Invalid credentials. Please try again.");
-      toast.error(err.message || "Invalid credentials. Please try again.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Invalid credentials. Please try again.";
+      setError(message);
+      toast.error(message);
     }
   };
 
@@ -75,7 +63,7 @@ function LoginForm() {
           <label className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--brand-green)]/70">Password</label>
           <PasswordInput
             {...form.register("password")}
-            className="h-12 w-full rounded-xl border border-[var(--brand-green)]/20 bg-transparent px-4 transition-all focus:border-[var(--brand-green)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-green)]"
+            className="h-12 rounded-xl border border-[var(--brand-green)]/20 bg-transparent px-4 transition-all focus:border-[var(--brand-green)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-green)]"
             placeholder="••••••••"
           />
           {form.formState.errors.password ? (
@@ -96,12 +84,12 @@ function LoginForm() {
 
       <div className="mt-8 text-center text-sm text-[var(--brand-green)]/60">
         Don't have an account?{" "}
-        <Link
+        <a
           href={redirectParams ? `/register?redirect=${encodeURIComponent(redirectParams)}` : "/register"}
           className="font-semibold text-[var(--brand-green)] transition-colors hover:text-[var(--brand-gold)]"
         >
           Create one
-        </Link>
+        </a>
       </div>
     </div>
   );
@@ -109,9 +97,15 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen bg-[var(--brand-cream)] px-6 py-20 flex flex-col justify-center">
+    <main className="flex min-h-screen flex-col justify-center bg-[var(--brand-cream)] px-6 py-20">
       <PageSpacer />
-      <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-[var(--brand-green)]" /></div>}>
+      <Suspense
+        fallback={
+          <div className="flex justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-[var(--brand-green)]" />
+          </div>
+        }
+      >
         <LoginForm />
       </Suspense>
     </main>
