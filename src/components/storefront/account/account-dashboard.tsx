@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
   CreditCard,
@@ -10,11 +11,14 @@ import {
   LogOut,
   MapPin,
   Package,
+  RefreshCw,
   ShieldAlert,
   Sparkles,
   User2
 } from "lucide-react";
 import { toast } from "sonner";
+import { customerSessionQueryKey } from "@/features/customer-auth/session";
+import { useCartStore } from "@/stores/cartStore";
 
 type Address = {
   address: string;
@@ -36,7 +40,6 @@ type AccountData = {
     subscribedToNewsletter: boolean;
     createdAt: string | Date;
     shippingAddress: Address;
-    billingAddress: Address;
   };
   orders: Array<{
     id: string;
@@ -78,6 +81,7 @@ type AccountData = {
 
 type AccountDashboardProps = {
   initialData: AccountData;
+  greetingVariant?: "signup" | "login";
 };
 
 type TabKey = "overview" | "orders" | "notifications" | "profile" | "security";
@@ -96,13 +100,14 @@ type FormState = {
     country: string;
     zipCode: string;
   };
-  billingAddress: {
-    address: string;
-    city: string;
-    state: string;
-    country: string;
-    zipCode: string;
-  };
+};
+
+const EMPTY_ADDRESS_FORM = {
+  address: "",
+  city: "",
+  state: "",
+  country: "",
+  zipCode: ""
 };
 
 function toFormState(data: AccountData["customer"]): FormState {
@@ -119,13 +124,6 @@ function toFormState(data: AccountData["customer"]): FormState {
       state: data.shippingAddress?.state ?? "",
       country: data.shippingAddress?.country ?? "",
       zipCode: data.shippingAddress?.zipCode ?? ""
-    },
-    billingAddress: {
-      address: data.billingAddress?.address ?? "",
-      city: data.billingAddress?.city ?? "",
-      state: data.billingAddress?.state ?? "",
-      country: data.billingAddress?.country ?? "",
-      zipCode: data.billingAddress?.zipCode ?? ""
     }
   };
 }
@@ -161,18 +159,46 @@ function notificationLabel(type: string) {
   return "Update";
 }
 
+function formatAddress(address: Address) {
+  if (!address?.address) {
+    return null;
+  }
+
+  return [
+    address.address,
+    address.city,
+    address.state,
+    address.country,
+    address.zipCode
+  ].filter((value) => value && value.trim().length > 0).join(", ");
+}
+
 function emptyAddress(address: FormState["shippingAddress"]) {
   return [address.address, address.city, address.state, address.zipCode].every((value) => value.trim().length === 0)
     && (address.country.trim().length === 0 || address.country.trim().toLowerCase() === "nigeria");
 }
 
-export function AccountDashboard({ initialData }: AccountDashboardProps) {
+function accountGreeting(firstName: string, greetingVariant?: "signup" | "login") {
+  return greetingVariant === "signup" ? `Welcome, ${firstName}.` : `Welcome back, ${firstName}.`;
+}
+
+export function AccountDashboard({ initialData, greetingVariant }: AccountDashboardProps) {
+  const clearCart = useCartStore((state) => state.clearCart);
+  const closeCart = useCartStore((state) => state.closeCart);
+  const syncCustomerSession = useCartStore((state) => state.syncCustomerSession);
   const [data, setData] = useState(initialData);
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [form, setForm] = useState<FormState>(() => toFormState(initialData.customer));
-  const [isPending, startTransition] = useTransition();
+  const [isSaving, setIsSaving] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
+  const [notificationActionId, setNotificationActionId] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const contentRef = useRef<HTMLElement | null>(null);
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const tabs = useMemo(
     () => [
@@ -187,12 +213,25 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
 
   const unreadNotifications = data.notifications.filter((item) => !item.isRead).length;
 
+  const handleTabChange = (tab: TabKey) => {
+    setActiveTab(tab);
+
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      window.requestAnimationFrame(() => {
+        contentRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start"
+        });
+      });
+    }
+  };
+
   const updateField = (key: keyof FormState, value: string | boolean) => {
     setForm((current) => ({ ...current, [key]: value as never }));
   };
 
   const updateAddressField = (
-    group: "shippingAddress" | "billingAddress",
+    group: "shippingAddress",
     key: keyof FormState["shippingAddress"],
     value: string
   ) => {
@@ -219,36 +258,39 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
 
   const saveProfile = async (event: React.FormEvent) => {
     event.preventDefault();
+    setIsSaving(true);
 
-    startTransition(() => {
-      void (async () => {
-        try {
-          const res = await fetch("/api/customer-account", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              ...form,
-              shippingAddress: emptyAddress(form.shippingAddress) ? null : form.shippingAddress,
-              billingAddress: emptyAddress(form.billingAddress) ? null : form.billingAddress
-            })
-          });
+    try {
+      const res = await fetch("/api/customer-account", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          shippingAddress: emptyAddress(form.shippingAddress) ? null : form.shippingAddress
+        })
+      });
 
-          const payload = await res.json();
-          if (!res.ok || !payload.data) {
-            throw new Error(payload.error ?? "Failed to update account");
-          }
+      const payload = await res.json();
+      if (!res.ok || !payload.data) {
+        throw new Error(payload.error ?? "Failed to update account");
+      }
 
-          setData(payload.data);
-          setForm(toFormState(payload.data.customer));
-          toast.success(payload.message ?? "Account updated successfully.");
-        } catch (error) {
-          toast.error(error instanceof Error ? error.message : "Failed to update account.");
-        }
-      })();
-    });
+      setData(payload.data);
+      setForm((current) => ({
+        ...current,
+        shippingAddress: { ...EMPTY_ADDRESS_FORM }
+      }));
+      toast.success(payload.message ?? "Account updated successfully.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update account.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const markNotificationRead = async (notificationId: string) => {
+    setNotificationActionId(notificationId);
+
     try {
       const res = await fetch(`/api/customer-account/notifications/${notificationId}`, {
         method: "PATCH"
@@ -271,10 +313,14 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
       }));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update notification.");
+    } finally {
+      setNotificationActionId(null);
     }
   };
 
   const markAllNotificationsRead = async () => {
+    setIsMarkingAllRead(true);
+
     try {
       const res = await fetch("/api/customer-account/notifications", {
         method: "PATCH"
@@ -296,24 +342,44 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
       toast.success("All notifications marked as read.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update notifications.");
+    } finally {
+      setIsMarkingAllRead(false);
     }
   };
 
   const logout = async () => {
-    await fetch("/api/customer-auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
+    setIsLoggingOut(true);
+
+    try {
+      await fetch("/api/customer-auth/logout", { method: "POST" });
+      closeCart();
+      clearCart();
+      syncCustomerSession(null);
+      queryClient.setQueryData(customerSessionQueryKey, null);
+      await queryClient.invalidateQueries({ queryKey: customerSessionQueryKey });
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to logout.");
+      setIsLoggingOut(false);
+    }
+  };
+
+  const refreshAccount = async () => {
+    setIsRefreshing(true);
+
+    try {
+      setActiveTab("profile");
+      await reloadAccount();
+      toast.success("Account refreshed.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to refresh account.");
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const deleteAccount = async () => {
-    const confirmed = window.confirm(
-      "This will permanently remove your profile details and sign you out. Order records will be retained without your personal details. Continue?"
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
     setIsDeleting(true);
 
     try {
@@ -326,6 +392,12 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
         throw new Error(payload.error ?? "Failed to delete account");
       }
 
+      closeCart();
+      clearCart();
+      syncCustomerSession(null);
+      queryClient.setQueryData(customerSessionQueryKey, null);
+      await queryClient.invalidateQueries({ queryKey: customerSessionQueryKey });
+      setIsDeleteModalOpen(false);
       toast.success(payload.message ?? "Your account has been deleted.");
       router.push("/");
       router.refresh();
@@ -336,14 +408,50 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--brand-cream)] px-5 py-16 text-[var(--brand-green)] md:px-8">
+    <div className="min-h-screen bg-[var(--brand-cream)] px-4 py-16 text-[var(--brand-green)] sm:px-5 md:px-8">
+      {isDeleteModalOpen ? (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[rgba(17,53,40,0.45)] px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[28px] border border-[rgba(17,53,40,0.08)] bg-white p-6 shadow-[0_30px_80px_rgba(17,53,40,0.2)]">
+            <p className="text-xs uppercase tracking-[0.18em] text-rose-500/75">Confirm action</p>
+            <h3 className="mt-3 text-2xl text-[var(--brand-green)]" style={{ fontFamily: "var(--font-display)" }}>
+              Delete account permanently?
+            </h3>
+            <p className="mt-4 text-sm leading-7 text-[var(--brand-green)]/70">
+              This will permanently remove your profile details and sign you out. Order records will be retained without your personal details.
+            </p>
+
+            <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                disabled={isDeleting}
+                className="inline-flex h-12 items-center justify-center rounded-full border border-[rgba(17,53,40,0.15)] px-6 text-sm font-semibold uppercase tracking-[0.12em] text-[var(--brand-green)] disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void deleteAccount();
+                }}
+                disabled={isDeleting}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-rose-600 px-6 text-sm font-semibold uppercase tracking-[0.12em] text-white disabled:opacity-70"
+              >
+                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
+                {isDeleting ? "Deleting account" : "Continue"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="mx-auto max-w-7xl">
         <section className="overflow-hidden rounded-[32px] bg-[linear-gradient(135deg,#113528_0%,#1b4a39_45%,#c1a36e_100%)] px-6 py-10 text-white shadow-[0_30px_80px_rgba(17,53,40,0.25)] md:px-10">
           <div className="grid gap-8 lg:grid-cols-[1.4fr_0.9fr]">
             <div>
               <p className="mb-3 text-xs uppercase tracking-[0.28em] text-white/65">My Account</p>
               <h1 className="max-w-2xl text-4xl leading-tight md:text-5xl" style={{ fontFamily: "var(--font-display)" }}>
-                Welcome back, {data.customer.firstName}.
+                {accountGreeting(data.customer.firstName, greetingVariant)}
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-white/75 md:text-base">
                 Track orders, manage your details, stay in sync with payment updates, and keep your storefront profile exactly how you want it.
@@ -368,7 +476,7 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
         </section>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)]">
-          <aside className="rounded-[28px] border border-[rgba(17,53,40,0.08)] bg-white p-4 shadow-[0_16px_40px_rgba(17,53,40,0.06)]">
+          <aside className="rounded-[28px] border border-[rgba(17,53,40,0.08)] bg-white p-3 shadow-[0_16px_40px_rgba(17,53,40,0.06)] sm:p-4">
             <div className="rounded-[24px] bg-[rgba(17,53,40,0.04)] p-4">
               <p className="text-lg font-semibold">{data.customer.firstName} {data.customer.lastName}</p>
               <p className="mt-1 text-sm text-[var(--brand-green)]/60">{data.customer.email}</p>
@@ -377,7 +485,7 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
               </p>
             </div>
 
-            <nav className="mt-4 space-y-2">
+            <nav className="mt-4 hidden space-y-2 lg:block">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const selected = activeTab === tab.key;
@@ -386,7 +494,7 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
                   <button
                     key={tab.key}
                     type="button"
-                    onClick={() => setActiveTab(tab.key)}
+                    onClick={() => handleTabChange(tab.key)}
                     className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left transition-colors ${
                       selected
                         ? "bg-[var(--brand-green)] text-white"
@@ -408,11 +516,41 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
             </nav>
           </aside>
 
-          <section className="space-y-6">
+          <section ref={contentRef} className="min-w-0 space-y-6">
+            <div className="sticky top-20 z-20 -mx-1 overflow-x-auto rounded-[24px] border border-[rgba(17,53,40,0.08)] bg-white/95 px-2 py-2 shadow-[0_16px_40px_rgba(17,53,40,0.08)] backdrop-blur [-webkit-overflow-scrolling:touch] lg:hidden">
+              <div className="flex min-w-max snap-x snap-mandatory gap-2 pr-2">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const selected = activeTab === tab.key;
+
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => handleTabChange(tab.key)}
+                      className={`flex min-h-[52px] shrink-0 snap-start items-center gap-2 whitespace-nowrap rounded-2xl px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors sm:text-xs ${
+                        selected
+                          ? "bg-[var(--brand-green)] text-white"
+                          : "bg-[rgba(17,53,40,0.04)] text-[var(--brand-green)]"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span>{tab.label}</span>
+                      {tab.key === "notifications" && unreadNotifications > 0 ? (
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${selected ? "bg-white/15" : "bg-[var(--brand-gold)] text-white"}`}>
+                          {unreadNotifications}
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {activeTab === "overview" ? (
               <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-                <div className="rounded-[28px] border border-[rgba(17,53,40,0.08)] bg-white p-6 shadow-[0_16px_40px_rgba(17,53,40,0.06)]">
-                  <div className="flex items-center justify-between gap-4">
+                <div className="rounded-[28px] border border-[rgba(17,53,40,0.08)] bg-white p-4 shadow-[0_16px_40px_rgba(17,53,40,0.06)] sm:p-6">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
                       <p className="text-xs uppercase tracking-[0.18em] text-[var(--brand-green)]/45">Recent Orders</p>
                       <h2 className="mt-2 text-2xl" style={{ fontFamily: "var(--font-display)" }}>Your latest purchases</h2>
@@ -420,7 +558,7 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
                     <button
                       type="button"
                       onClick={() => setActiveTab("orders")}
-                      className="rounded-full border border-[rgba(17,53,40,0.15)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] hover:border-[var(--brand-gold)] hover:text-[var(--brand-gold)]"
+                      className="min-h-11 rounded-full border border-[rgba(17,53,40,0.15)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] hover:border-[var(--brand-gold)] hover:text-[var(--brand-gold)]"
                     >
                       View all
                     </button>
@@ -444,7 +582,7 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
                             <Link
                               key={item.id}
                               href={`/shop/${item.product.slug}`}
-                              className="flex min-w-[200px] flex-1 items-center gap-3 rounded-2xl bg-[rgba(17,53,40,0.03)] p-3 hover:bg-[rgba(17,53,40,0.05)]"
+                              className="flex min-w-0 flex-1 basis-full items-center gap-3 rounded-2xl bg-[rgba(17,53,40,0.03)] p-3 hover:bg-[rgba(17,53,40,0.05)] sm:min-w-[200px] sm:basis-auto"
                             >
                               <div className="h-14 w-14 overflow-hidden rounded-2xl bg-[rgba(17,53,40,0.08)]">
                                 {item.product.images[0] ? (
@@ -476,8 +614,8 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
                 </div>
 
                 <div className="space-y-6">
-                  <div className="rounded-[28px] border border-[rgba(17,53,40,0.08)] bg-white p-6 shadow-[0_16px_40px_rgba(17,53,40,0.06)]">
-                    <div className="flex items-center justify-between gap-4">
+                  <div className="rounded-[28px] border border-[rgba(17,53,40,0.08)] bg-white p-4 shadow-[0_16px_40px_rgba(17,53,40,0.06)] sm:p-6">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
                       <div>
                         <p className="text-xs uppercase tracking-[0.18em] text-[var(--brand-green)]/45">Notifications</p>
                         <h2 className="mt-2 text-2xl" style={{ fontFamily: "var(--font-display)" }}>Store updates</h2>
@@ -486,9 +624,10 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
                         <button
                           type="button"
                           onClick={markAllNotificationsRead}
-                          className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--brand-gold)]"
+                          disabled={isMarkingAllRead}
+                          className="inline-flex min-h-11 items-center justify-center text-xs font-semibold uppercase tracking-[0.14em] text-[var(--brand-gold)] disabled:opacity-50"
                         >
-                          Mark all read
+                          {isMarkingAllRead ? <Loader2 className="h-4 w-4 animate-spin" /> : "Mark all read"}
                         </button>
                       ) : null}
                     </div>
@@ -516,9 +655,10 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
                               <button
                                 type="button"
                                 onClick={() => markNotificationRead(notification.id)}
-                                className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--brand-green)] shadow-sm"
+                                disabled={notificationActionId === notification.id}
+                                className="inline-flex min-h-10 items-center justify-center rounded-full bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--brand-green)] shadow-sm disabled:opacity-60"
                               >
-                                Read
+                                {notificationActionId === notification.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Read"}
                               </button>
                             ) : null}
                           </div>
@@ -533,7 +673,7 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
                     </div>
                   </div>
 
-                  <div className="rounded-[28px] border border-[rgba(17,53,40,0.08)] bg-white p-6 shadow-[0_16px_40px_rgba(17,53,40,0.06)]">
+                  <div className="rounded-[28px] border border-[rgba(17,53,40,0.08)] bg-white p-4 shadow-[0_16px_40px_rgba(17,53,40,0.06)] sm:p-6">
                     <p className="text-xs uppercase tracking-[0.18em] text-[var(--brand-green)]/45">Saved Details</p>
                     <div className="mt-5 space-y-5 text-sm">
                       <div className="flex items-start gap-3">
@@ -549,7 +689,7 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
                         <div>
                           <p className="font-semibold">Shipping</p>
                           <p className="mt-1 text-[var(--brand-green)]/60">
-                            {data.customer.shippingAddress?.address || "No shipping address saved yet"}
+                            {formatAddress(data.customer.shippingAddress) || "No shipping address saved yet"}
                           </p>
                         </div>
                       </div>
@@ -569,7 +709,7 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
             ) : null}
 
             {activeTab === "orders" ? (
-              <div className="rounded-[28px] border border-[rgba(17,53,40,0.08)] bg-white p-6 shadow-[0_16px_40px_rgba(17,53,40,0.06)]">
+              <div className="rounded-[28px] border border-[rgba(17,53,40,0.08)] bg-white p-4 shadow-[0_16px_40px_rgba(17,53,40,0.06)] sm:p-6">
                 <div className="flex flex-wrap items-end justify-between gap-4">
                   <div>
                     <p className="text-xs uppercase tracking-[0.18em] text-[var(--brand-green)]/45">Orders</p>
@@ -580,7 +720,7 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
 
                 <div className="mt-8 space-y-4">
                   {data.orders.map((order) => (
-                    <div key={order.id} className="rounded-[28px] border border-[rgba(17,53,40,0.08)] p-5">
+                    <div key={order.id} className="rounded-[28px] border border-[rgba(17,53,40,0.08)] p-4 sm:p-5">
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
                           <p className="text-lg font-semibold">#{order.orderNumber}</p>
@@ -634,7 +774,7 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
             ) : null}
 
             {activeTab === "notifications" ? (
-              <div className="rounded-[28px] border border-[rgba(17,53,40,0.08)] bg-white p-6 shadow-[0_16px_40px_rgba(17,53,40,0.06)]">
+              <div className="rounded-[28px] border border-[rgba(17,53,40,0.08)] bg-white p-4 shadow-[0_16px_40px_rgba(17,53,40,0.06)] sm:p-6">
                 <div className="flex flex-wrap items-end justify-between gap-4">
                   <div>
                     <p className="text-xs uppercase tracking-[0.18em] text-[var(--brand-green)]/45">Notifications</p>
@@ -643,10 +783,10 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
                   <button
                     type="button"
                     onClick={markAllNotificationsRead}
-                    disabled={unreadNotifications === 0}
-                    className="rounded-full border border-[rgba(17,53,40,0.15)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] disabled:opacity-40"
+                    disabled={unreadNotifications === 0 || isMarkingAllRead}
+                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-[rgba(17,53,40,0.15)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] disabled:opacity-40"
                   >
-                    Mark all read
+                    {isMarkingAllRead ? <Loader2 className="h-4 w-4 animate-spin" /> : "Mark all read"}
                   </button>
                 </div>
 
@@ -654,7 +794,7 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
                   {data.notifications.map((notification) => (
                     <div
                       key={notification.id}
-                      className={`rounded-[28px] border p-5 ${notification.isRead ? "border-[rgba(17,53,40,0.08)] bg-white" : "border-[rgba(193,163,110,0.4)] bg-[rgba(193,163,110,0.12)]"}`}
+                      className={`rounded-[28px] border p-4 sm:p-5 ${notification.isRead ? "border-[rgba(17,53,40,0.08)] bg-white" : "border-[rgba(193,163,110,0.4)] bg-[rgba(193,163,110,0.12)]"}`}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="max-w-2xl">
@@ -673,9 +813,10 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
                           <button
                             type="button"
                             onClick={() => markNotificationRead(notification.id)}
-                            className="rounded-full bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-green)] shadow-sm"
+                            disabled={notificationActionId === notification.id}
+                            className="inline-flex min-h-11 items-center justify-center rounded-full bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-green)] shadow-sm disabled:opacity-60"
                           >
-                            Mark read
+                            {notificationActionId === notification.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Mark read"}
                           </button>
                         ) : null}
                       </div>
@@ -692,7 +833,7 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
             ) : null}
 
             {activeTab === "profile" ? (
-              <form onSubmit={saveProfile} className="rounded-[28px] border border-[rgba(17,53,40,0.08)] bg-white p-6 shadow-[0_16px_40px_rgba(17,53,40,0.06)]">
+              <form onSubmit={saveProfile} className="rounded-[28px] border border-[rgba(17,53,40,0.08)] bg-white p-4 shadow-[0_16px_40px_rgba(17,53,40,0.06)] sm:p-6">
                 <div className="flex flex-wrap items-end justify-between gap-4">
                   <div>
                     <p className="text-xs uppercase tracking-[0.18em] text-[var(--brand-green)]/45">Profile</p>
@@ -700,10 +841,10 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
                   </div>
                   <button
                     type="submit"
-                    disabled={isPending}
-                    className="flex h-12 items-center justify-center rounded-full bg-[var(--brand-green)] px-6 text-sm font-semibold uppercase tracking-[0.12em] text-white disabled:opacity-70"
+                    disabled={isSaving}
+                    className="hidden h-12 min-w-[152px] items-center justify-center rounded-full bg-[var(--brand-green)] px-6 text-sm font-semibold uppercase tracking-[0.12em] text-white disabled:opacity-70 sm:flex"
                   >
-                    {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save changes"}
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save changes"}
                   </button>
                 </div>
 
@@ -735,34 +876,17 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
                     </div>
                   </div>
 
-                  <div className="grid gap-6 xl:grid-cols-2">
-                    <div className="rounded-[24px] bg-[rgba(17,53,40,0.03)] p-5">
-                      <h3 className="text-lg font-semibold">Shipping Address</h3>
-                      <div className="mt-4 grid gap-3">
-                        <input value={form.shippingAddress.address} onChange={(event) => updateAddressField("shippingAddress", "address", event.target.value)} className="h-12 rounded-2xl border border-[rgba(17,53,40,0.12)] px-4 outline-none focus:border-[var(--brand-gold)]" placeholder="Street address" />
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <input value={form.shippingAddress.city} onChange={(event) => updateAddressField("shippingAddress", "city", event.target.value)} className="h-12 rounded-2xl border border-[rgba(17,53,40,0.12)] px-4 outline-none focus:border-[var(--brand-gold)]" placeholder="City" />
-                          <input value={form.shippingAddress.state} onChange={(event) => updateAddressField("shippingAddress", "state", event.target.value)} className="h-12 rounded-2xl border border-[rgba(17,53,40,0.12)] px-4 outline-none focus:border-[var(--brand-gold)]" placeholder="State" />
-                        </div>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <input value={form.shippingAddress.country} onChange={(event) => updateAddressField("shippingAddress", "country", event.target.value)} className="h-12 rounded-2xl border border-[rgba(17,53,40,0.12)] px-4 outline-none focus:border-[var(--brand-gold)]" placeholder="Country" />
-                          <input value={form.shippingAddress.zipCode} onChange={(event) => updateAddressField("shippingAddress", "zipCode", event.target.value)} className="h-12 rounded-2xl border border-[rgba(17,53,40,0.12)] px-4 outline-none focus:border-[var(--brand-gold)]" placeholder="ZIP code" />
-                        </div>
+                  <div className="rounded-[24px] bg-[rgba(17,53,40,0.03)] p-5">
+                    <h3 className="text-lg font-semibold">Shipping Address</h3>
+                    <div className="mt-4 grid gap-3">
+                      <input value={form.shippingAddress.address} onChange={(event) => updateAddressField("shippingAddress", "address", event.target.value)} className="h-12 rounded-2xl border border-[rgba(17,53,40,0.12)] px-4 outline-none focus:border-[var(--brand-gold)]" placeholder="Street address" />
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <input value={form.shippingAddress.city} onChange={(event) => updateAddressField("shippingAddress", "city", event.target.value)} className="h-12 rounded-2xl border border-[rgba(17,53,40,0.12)] px-4 outline-none focus:border-[var(--brand-gold)]" placeholder="City" />
+                        <input value={form.shippingAddress.state} onChange={(event) => updateAddressField("shippingAddress", "state", event.target.value)} className="h-12 rounded-2xl border border-[rgba(17,53,40,0.12)] px-4 outline-none focus:border-[var(--brand-gold)]" placeholder="State" />
                       </div>
-                    </div>
-
-                    <div className="rounded-[24px] bg-[rgba(17,53,40,0.03)] p-5">
-                      <h3 className="text-lg font-semibold">Billing Address</h3>
-                      <div className="mt-4 grid gap-3">
-                        <input value={form.billingAddress.address} onChange={(event) => updateAddressField("billingAddress", "address", event.target.value)} className="h-12 rounded-2xl border border-[rgba(17,53,40,0.12)] px-4 outline-none focus:border-[var(--brand-gold)]" placeholder="Street address" />
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <input value={form.billingAddress.city} onChange={(event) => updateAddressField("billingAddress", "city", event.target.value)} className="h-12 rounded-2xl border border-[rgba(17,53,40,0.12)] px-4 outline-none focus:border-[var(--brand-gold)]" placeholder="City" />
-                          <input value={form.billingAddress.state} onChange={(event) => updateAddressField("billingAddress", "state", event.target.value)} className="h-12 rounded-2xl border border-[rgba(17,53,40,0.12)] px-4 outline-none focus:border-[var(--brand-gold)]" placeholder="State" />
-                        </div>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <input value={form.billingAddress.country} onChange={(event) => updateAddressField("billingAddress", "country", event.target.value)} className="h-12 rounded-2xl border border-[rgba(17,53,40,0.12)] px-4 outline-none focus:border-[var(--brand-gold)]" placeholder="Country" />
-                          <input value={form.billingAddress.zipCode} onChange={(event) => updateAddressField("billingAddress", "zipCode", event.target.value)} className="h-12 rounded-2xl border border-[rgba(17,53,40,0.12)] px-4 outline-none focus:border-[var(--brand-gold)]" placeholder="ZIP code" />
-                        </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <input value={form.shippingAddress.country} onChange={(event) => updateAddressField("shippingAddress", "country", event.target.value)} className="h-12 rounded-2xl border border-[rgba(17,53,40,0.12)] px-4 outline-none focus:border-[var(--brand-gold)]" placeholder="Country" />
+                        <input value={form.shippingAddress.zipCode} onChange={(event) => updateAddressField("shippingAddress", "zipCode", event.target.value)} className="h-12 rounded-2xl border border-[rgba(17,53,40,0.12)] px-4 outline-none focus:border-[var(--brand-gold)]" placeholder="ZIP code" />
                       </div>
                     </div>
                   </div>
@@ -776,13 +900,23 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
                     />
                     Keep me subscribed to new arrivals, offers, and brand updates.
                   </label>
+
+                  <div className="sticky bottom-4 z-20 -mx-1 mt-2 rounded-[24px] border border-[rgba(17,53,40,0.08)] bg-white/95 p-3 shadow-[0_16px_40px_rgba(17,53,40,0.08)] backdrop-blur sm:hidden">
+                    <button
+                      type="submit"
+                      disabled={isSaving}
+                      className="flex h-12 w-full items-center justify-center rounded-full bg-[var(--brand-green)] px-6 text-sm font-semibold uppercase tracking-[0.12em] text-white disabled:opacity-70"
+                    >
+                      {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save changes"}
+                    </button>
+                  </div>
                 </div>
               </form>
             ) : null}
 
             {activeTab === "security" ? (
               <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
-                <div className="rounded-[28px] border border-[rgba(17,53,40,0.08)] bg-white p-6 shadow-[0_16px_40px_rgba(17,53,40,0.06)]">
+                <div className="rounded-[28px] border border-[rgba(17,53,40,0.08)] bg-white p-4 shadow-[0_16px_40px_rgba(17,53,40,0.06)] sm:p-6">
                   <p className="text-xs uppercase tracking-[0.18em] text-[var(--brand-green)]/45">Session</p>
                   <h2 className="mt-2 text-2xl" style={{ fontFamily: "var(--font-display)" }}>Stay in control</h2>
                   <p className="mt-4 max-w-xl text-sm leading-7 text-[var(--brand-green)]/65">
@@ -793,25 +927,27 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
                     <button
                       type="button"
                       onClick={logout}
-                      className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[var(--brand-green)] px-6 text-sm font-semibold uppercase tracking-[0.12em] text-white"
+                      disabled={isLoggingOut}
+                      className="inline-flex h-12 min-w-[140px] items-center justify-center gap-2 rounded-full bg-[var(--brand-green)] px-6 text-sm font-semibold uppercase tracking-[0.12em] text-white disabled:opacity-70"
                     >
-                      <LogOut className="h-4 w-4" />
-                      Logout
+                      {isLoggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                      {isLoggingOut ? "Logging out" : "Logout"}
                     </button>
                     <button
                       type="button"
                       onClick={() => {
-                        setActiveTab("profile");
-                        void reloadAccount();
+                        void refreshAccount();
                       }}
-                      className="inline-flex h-12 items-center justify-center rounded-full border border-[rgba(17,53,40,0.15)] px-6 text-sm font-semibold uppercase tracking-[0.12em]"
+                      disabled={isRefreshing}
+                      className="inline-flex h-12 min-w-[172px] items-center justify-center gap-2 rounded-full border border-[rgba(17,53,40,0.15)] px-6 text-sm font-semibold uppercase tracking-[0.12em] disabled:opacity-60"
                     >
-                      Refresh account
+                      {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                      {isRefreshing ? "Refreshing" : "Refresh account"}
                     </button>
                   </div>
                 </div>
 
-                <div className="rounded-[28px] border border-rose-200 bg-[linear-gradient(180deg,rgba(255,245,245,1)_0%,rgba(255,255,255,1)_100%)] p-6 shadow-[0_16px_40px_rgba(127,29,29,0.06)]">
+                <div className="rounded-[28px] border border-rose-200 bg-[linear-gradient(180deg,rgba(255,245,245,1)_0%,rgba(255,255,255,1)_100%)] p-4 shadow-[0_16px_40px_rgba(127,29,29,0.06)] sm:p-6">
                   <p className="text-xs uppercase tracking-[0.18em] text-rose-500/75">Danger Zone</p>
                   <h3 className="mt-2 text-2xl text-rose-700" style={{ fontFamily: "var(--font-display)" }}>Delete account permanently</h3>
                   <p className="mt-4 text-sm leading-7 text-rose-800/70">
@@ -819,12 +955,12 @@ export function AccountDashboard({ initialData }: AccountDashboardProps) {
                   </p>
                   <button
                     type="button"
-                    onClick={deleteAccount}
+                    onClick={() => setIsDeleteModalOpen(true)}
                     disabled={isDeleting}
-                    className="mt-8 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-rose-600 px-6 text-sm font-semibold uppercase tracking-[0.12em] text-white disabled:opacity-70"
+                    className="mt-8 inline-flex h-12 min-w-[208px] items-center justify-center gap-2 rounded-full bg-rose-600 px-6 text-sm font-semibold uppercase tracking-[0.12em] text-white disabled:opacity-70"
                   >
                     {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
-                    Delete account
+                    {isDeleting ? "Deleting account" : "Delete account"}
                   </button>
                 </div>
               </div>

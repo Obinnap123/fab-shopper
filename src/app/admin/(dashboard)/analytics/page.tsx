@@ -32,7 +32,10 @@ export default async function AnalyticsPage() {
     }),
     prisma.product.count({ where: { costPrice: null } }),
     prisma.customer.count({
-      where: { createdAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) } }
+      where: {
+        deletedAt: null,
+        createdAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) }
+      }
     })
   ]);
 

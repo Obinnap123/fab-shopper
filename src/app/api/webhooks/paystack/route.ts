@@ -53,7 +53,7 @@ export async function POST(request: Request) {
               title: `Payment confirmed for ${order.orderNumber}`,
               message: "Your payment has been received successfully. We will keep you posted as your order moves forward.",
               type: "PAYMENT",
-              link: "/account",
+              link: `/order-confirmation/${result.orderId}`,
               referenceKey: `payment-confirmed-${order.orderNumber}`
             });
           }

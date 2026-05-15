@@ -58,7 +58,7 @@ export default async function AdminDashboardPage() {
       _sum: { quantity: true },
       where: { order: { status: "COMPLETED" } }
     }),
-    prisma.customer.count(),
+    prisma.customer.count({ where: { deletedAt: null } }),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (prisma as any).storeVisit.count(),
     prisma.order.aggregate({

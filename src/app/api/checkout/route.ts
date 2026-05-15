@@ -126,7 +126,7 @@ export async function POST(request: Request) {
       title: `Order ${orderNumber} created`,
       message: "Your order has been created and is waiting for payment confirmation.",
       type: "ORDER",
-      link: "/account",
+      link: `/order-confirmation/${order.id}`,
       referenceKey: `order-created-${order.id}`
     });
 

@@ -13,8 +13,7 @@ const accountCustomerSelect = {
   additionalInfo: true,
   subscribedToNewsletter: true,
   createdAt: true,
-  shippingAddress: true,
-  billingAddress: true
+  shippingAddress: true
 } satisfies Prisma.CustomerSelect;
 
 const accountOrderSelect = {

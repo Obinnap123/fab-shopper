@@ -81,6 +81,14 @@ export default function OrderConfirmationPage() {
     }).format(date);
   };
 
+  const isPaid = order?.paymentStatus === "PAID";
+  const heading = loading ? "Loading Order..." : isPaid ? "Order Confirmed!" : "Order Received";
+  const description = loading
+    ? "Please wait while we load your order details."
+    : isPaid
+      ? "Thank you for shopping with Fab Shopper. Your payment has been confirmed and your order is being processed."
+      : "Your order has been received. Complete payment to move it into processing, and check back here for updates.";
+
   return (
     <>
       <PageSpacer />
@@ -115,14 +123,10 @@ export default function OrderConfirmationPage() {
             className="text-[48px] text-[var(--brand-gold)]"
             style={{ fontFamily: "var(--font-display)", fontStyle: "italic" }}
           >
-            {loading ? "Confirming Order..." : "Order Confirmed!"}
+            {heading}
           </h1>
 
-          <p className="text-sm text-white/75">
-            {loading
-              ? "Please wait while we load your verified order details."
-              : "Thank you for shopping with Fab Shopper. Your order has been received and is being processed."}
-          </p>
+          <p className="text-sm text-white/75">{description}</p>
 
           {error ? (
             <div className="rounded border border-rose-300/40 bg-rose-500/10 px-6 py-4 text-sm text-rose-100">
@@ -148,7 +152,7 @@ export default function OrderConfirmationPage() {
 
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/shop"
+              href="/account"
               className="border border-[var(--brand-gold)] px-6 py-3 text-xs uppercase tracking-[0.2em] text-[var(--brand-gold)]"
             >
               Track Order

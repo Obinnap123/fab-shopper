@@ -5,8 +5,9 @@ import { CustomersClient } from "@/components/admin/customers/customers-client";
 import { prisma } from "@/lib/prisma";
 
 export default async function CustomersPage() {
-  const [totalCustomers, newsletterSubscribers] = await Promise.all([
-    prisma.customer.count(),
+  const [totalCustomers, deletedCustomers, newsletterSubscribers] = await Promise.all([
+    prisma.customer.count({ where: { deletedAt: null } }),
+    prisma.customer.count({ where: { deletedAt: { not: null } } }),
     prisma.newsletterSubscriber.count()
   ]);
   const customerGroups = 0;
@@ -16,17 +17,18 @@ export default async function CustomersPage() {
       <section className="space-y-6">
         <PageHeader
           eyebrow="Customers"
-          title="All Customers"
-          subtitle="Manage your customer base and communication lists."
+          title="Customers"
+          subtitle="Manage active customers by default and review deleted accounts when needed."
         />
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <StatsCard label="Total Customers" value={totalCustomers} />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <StatsCard label="Active Customers" value={totalCustomers} />
+          <StatsCard label="Deleted Customers" value={deletedCustomers} />
           <StatsCard label="Customer Groups" value={customerGroups} />
           <StatsCard label="Newsletter Subscribers" value={newsletterSubscribers} />
         </div>
 
-        <SectionCard title="Customers" subtitle="Live data from Prisma">
+        <SectionCard title="Customers" subtitle="Active customers are shown first. Use filters to inspect deleted accounts.">
           <CustomersClient />
         </SectionCard>
       </section>

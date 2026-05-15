@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getCustomerSession } from "@/lib/customer-auth";
 import { prisma } from "@/lib/prisma";
 
 const updateOrderSchema = z.object({
@@ -12,13 +13,24 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const order = await prisma.order.findUnique({
-    where: { id },
+  const session = await getCustomerSession();
+
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const order = await prisma.order.findFirst({
+    where: {
+      id,
+      customerId: session.id
+    },
     include: { customer: true, items: true }
   });
+
   if (!order) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+
   return NextResponse.json({ data: order });
 }
 

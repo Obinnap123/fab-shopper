@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,18 +19,84 @@ type CheckoutInitResponse = {
   paystackPublicKey: string;
 };
 
+type CheckoutAddress = {
+  address: string;
+  city: string;
+  state: string;
+};
+
+type CustomerAccountResponse = {
+  data?: {
+    customer: {
+      firstName: string;
+      lastName: string;
+      email: string | null;
+      phone: string | null;
+      shippingAddress: {
+        address: string;
+        city: string | null;
+        state: string | null;
+      } | null;
+    };
+  };
+  error?: string;
+};
+
+const EMPTY_SHIPPING_ADDRESS: CheckoutAddress = {
+  address: "",
+  city: "",
+  state: ""
+};
+
 export default function CheckoutView() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [shippingFee, setShippingFee] = useState(DEFAULT_SHIPPING_FEE);
   const { items, total, clearCart } = useCartStore();
   const [error, setError] = useState<string | null>(null);
+  const [shippingAddress, setShippingAddress] = useState<CheckoutAddress>(EMPTY_SHIPPING_ADDRESS);
 
   const subtotal = total();
   const vatAmount = calculateVatAmount(subtotal);
   const finalTotal = calculateTotalWithVat(subtotal, shippingFee);
 
   const handleDisplayTotal = (val: number) => `NGN ${val.toLocaleString()}`;
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    void (async () => {
+      try {
+        const res = await fetch("/api/customer-account", {
+          cache: "no-store",
+          signal: controller.signal
+        });
+
+        if (!res.ok) {
+          return;
+        }
+
+        const payload = (await res.json()) as CustomerAccountResponse;
+        const savedAddress = payload.data?.customer.shippingAddress;
+
+        if (!savedAddress) {
+          return;
+        }
+
+        setShippingAddress({
+          address: savedAddress.address ?? "",
+          city: savedAddress.city ?? "",
+          state: savedAddress.state ?? ""
+        });
+      } catch (fetchError) {
+        if ((fetchError as Error).name !== "AbortError") {
+          console.error(fetchError);
+        }
+      }
+    })();
+
+    return () => controller.abort();
+  }, []);
 
   const verifyPayment = async (reference: string, orderId: string) => {
     const res = await fetch("/api/paystack/verify", {
@@ -164,9 +230,24 @@ export default function CheckoutView() {
               Shipping
             </h1>
             <div className="grid gap-4 md:grid-cols-2">
-              <input className="h-12 rounded border border-[rgba(26,60,46,0.2)] px-4 md:col-span-2 bg-transparent outline-none focus:border-[var(--brand-green)]" placeholder="Street Address" />
-              <input className="h-12 rounded border border-[rgba(26,60,46,0.2)] px-4 bg-transparent outline-none focus:border-[var(--brand-green)]" placeholder="State" />
-              <input className="h-12 rounded border border-[rgba(26,60,46,0.2)] px-4 bg-transparent outline-none focus:border-[var(--brand-green)]" placeholder="City" />
+              <input
+                value={shippingAddress.address}
+                onChange={(event) => setShippingAddress((current) => ({ ...current, address: event.target.value }))}
+                className="h-12 rounded border border-[rgba(26,60,46,0.2)] px-4 md:col-span-2 bg-transparent outline-none focus:border-[var(--brand-green)]"
+                placeholder="Street Address"
+              />
+              <input
+                value={shippingAddress.state}
+                onChange={(event) => setShippingAddress((current) => ({ ...current, state: event.target.value }))}
+                className="h-12 rounded border border-[rgba(26,60,46,0.2)] px-4 bg-transparent outline-none focus:border-[var(--brand-green)]"
+                placeholder="State"
+              />
+              <input
+                value={shippingAddress.city}
+                onChange={(event) => setShippingAddress((current) => ({ ...current, city: event.target.value }))}
+                className="h-12 rounded border border-[rgba(26,60,46,0.2)] px-4 bg-transparent outline-none focus:border-[var(--brand-green)]"
+                placeholder="City"
+              />
             </div>
             <div className="space-y-3 text-sm text-[var(--brand-green)]/80 mt-6">
               <p className="font-semibold mb-2">Select your shipping rate:</p>

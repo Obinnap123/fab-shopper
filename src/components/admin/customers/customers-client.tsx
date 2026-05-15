@@ -29,11 +29,21 @@ type Customer = {
   lastName: string;
   email?: string | null;
   phone?: string | null;
+  deletedAt?: string | null;
 };
+
+function formatDeletedDate(value: string) {
+  return new Date(value).toLocaleDateString("en-NG", {
+    day: "numeric",
+    month: "short",
+    year: "numeric"
+  });
+}
 
 export function CustomersClient() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"active" | "deleted" | "all">("active");
 
   const form = useForm<CustomerForm>({
     resolver: zodResolver(customerSchema),
@@ -41,9 +51,9 @@ export function CustomersClient() {
   });
 
   const { data } = useQuery({
-    queryKey: ["customers"],
+    queryKey: ["customers", statusFilter],
     queryFn: async () => {
-      const json = await fetchJson<{ data: Customer[] }>("/api/customers");
+      const json = await fetchJson<{ data: Customer[] }>(`/api/customers?status=${statusFilter}`);
       return json.data as Customer[];
     }
   });
@@ -69,7 +79,24 @@ export function CustomersClient() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          {[
+            { value: "active", label: "Active" },
+            { value: "deleted", label: "Deleted" },
+            { value: "all", label: "All" }
+          ].map((filter) => (
+            <Button
+              key={filter.value}
+              type="button"
+              variant={statusFilter === filter.value ? "default" : "outline"}
+              onClick={() => setStatusFilter(filter.value as typeof statusFilter)}
+            >
+              {filter.label}
+            </Button>
+          ))}
+        </div>
+
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button>Add Customer</Button>
@@ -124,6 +151,7 @@ export function CustomersClient() {
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Phone</TableHead>
+            <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -135,13 +163,28 @@ export function CustomersClient() {
                 </TableCell>
                 <TableCell>{customer.email ?? "-"}</TableCell>
                 <TableCell>{customer.phone ?? "-"}</TableCell>
+                <TableCell>
+                  {customer.deletedAt ? (
+                    <span className="inline-flex rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-600">
+                      Deleted {formatDeletedDate(customer.deletedAt)}
+                    </span>
+                  ) : (
+                    <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-600">
+                      Active
+                    </span>
+                  )}
+                </TableCell>
               </TableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={3}>
+              <TableCell colSpan={4}>
                 <div className="py-10 text-center text-sm text-forest/60">
-                  No customers yet. Add your first customer to get started.
+                  {statusFilter === "deleted"
+                    ? "No deleted customers found."
+                    : statusFilter === "all"
+                      ? "No customers found yet."
+                      : "No active customers yet. Add your first customer to get started."}
                 </div>
               </TableCell>
             </TableRow>

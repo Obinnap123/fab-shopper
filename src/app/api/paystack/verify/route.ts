@@ -80,7 +80,7 @@ export async function POST(request: Request) {
         title: `Payment confirmed for ${reference}`,
         message: "We have confirmed your Paystack payment and your order is now being prepared.",
         type: "PAYMENT",
-        link: "/account",
+        link: `/order-confirmation/${order.id}`,
         referenceKey: `payment-confirmed-${reference}`
       });
     }

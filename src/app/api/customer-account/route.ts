@@ -18,8 +18,7 @@ const accountUpdateSchema = z.object({
   instagramHandle: z.string().trim().optional().or(z.literal("")),
   additionalInfo: z.string().trim().max(500, "Additional info is too long").optional().or(z.literal("")),
   subscribedToNewsletter: z.boolean().default(false),
-  shippingAddress: addressSchema.nullable(),
-  billingAddress: addressSchema.nullable()
+  shippingAddress: addressSchema.nullable()
 });
 
 function normalizeAddress(input: z.infer<typeof addressSchema> | null | undefined) {
@@ -65,8 +64,6 @@ export async function PATCH(request: Request) {
     }
 
     const shippingAddress = normalizeAddress(parsed.data.shippingAddress);
-    const billingAddress = normalizeAddress(parsed.data.billingAddress);
-
     await prisma.$transaction(async (tx) => {
       const current = await tx.customer.findUnique({
         where: { id: customer.id },
@@ -102,17 +99,8 @@ export async function PATCH(request: Request) {
         shippingAddressId = null;
       }
 
-      if (billingAddress) {
-        if (billingAddressId) {
-          await tx.address.update({
-            where: { id: billingAddressId },
-            data: billingAddress
-          });
-        } else {
-          const created = await tx.address.create({ data: billingAddress });
-          billingAddressId = created.id;
-        }
-      } else if (billingAddressId) {
+      // Billing address is no longer part of the storefront account flow.
+      if (billingAddressId) {
         await tx.customer.update({
           where: { id: customer.id },
           data: { billingAddressId: null }

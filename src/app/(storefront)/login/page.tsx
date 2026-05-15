@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -10,13 +11,28 @@ import { toast } from "sonner";
 import { PageSpacer } from "@/components/storefront/layout/page-spacer";
 import { PasswordInput } from "@/components/ui/password-input";
 import { loginCustomerRequest } from "@/features/customer-auth/client";
+import { customerSessionQueryKey, fetchCustomerSession } from "@/features/customer-auth/session";
 import { loginSchema, type LoginInput } from "@/features/customer-auth/schemas";
 
 function LoginForm() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const redirectParams = searchParams.get("redirect");
   const [error, setError] = useState<string | null>(null);
+
+  const getPostAuthRedirect = () => {
+    if (!redirectParams) {
+      return "/account?entry=login";
+    }
+
+    if (redirectParams.startsWith("/account")) {
+      const separator = redirectParams.includes("?") ? "&" : "?";
+      return `${redirectParams}${separator}entry=login`;
+    }
+
+    return redirectParams;
+  };
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -27,9 +43,13 @@ function LoginForm() {
     try {
       setError(null);
       await loginCustomerRequest(values);
+      await queryClient.fetchQuery({
+        queryKey: customerSessionQueryKey,
+        queryFn: fetchCustomerSession
+      });
 
       toast.success("Welcome back to Fab Shopper!");
-      router.push(redirectParams || "/account");
+      router.push(getPostAuthRedirect());
       router.refresh();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Invalid credentials. Please try again.";

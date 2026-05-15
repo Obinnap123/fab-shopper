@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
@@ -13,8 +14,17 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const take = Number(searchParams.get("take") ?? 20);
   const skip = Number(searchParams.get("skip") ?? 0);
+  const status = searchParams.get("status") ?? "active";
+
+  let where: Prisma.CustomerWhereInput = { deletedAt: null };
+  if (status === "deleted") {
+    where = { deletedAt: { not: null } };
+  } else if (status === "all") {
+    where = {};
+  }
 
   const customers = await prisma.customer.findMany({
+    where,
     take,
     skip,
     orderBy: { createdAt: "desc" }

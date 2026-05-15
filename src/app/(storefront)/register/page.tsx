@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -11,13 +12,29 @@ import { toast } from "sonner";
 import { PageSpacer } from "@/components/storefront/layout/page-spacer";
 import { PasswordInput } from "@/components/ui/password-input";
 import { registerCustomerRequest } from "@/features/customer-auth/client";
+import { customerSessionQueryKey, fetchCustomerSession } from "@/features/customer-auth/session";
 import { registerSchema, type RegisterInput } from "@/features/customer-auth/schemas";
+import { showBrowserNotification } from "@/lib/browser-notifications";
 
 function RegisterForm() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const redirectParams = searchParams.get("redirect");
   const [error, setError] = useState<string | null>(null);
+
+  const getPostAuthRedirect = () => {
+    if (!redirectParams) {
+      return "/account?entry=signup";
+    }
+
+    if (redirectParams.startsWith("/account")) {
+      const separator = redirectParams.includes("?") ? "&" : "?";
+      return `${redirectParams}${separator}entry=signup`;
+    }
+
+    return redirectParams;
+  };
 
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -28,9 +45,18 @@ function RegisterForm() {
     try {
       setError(null);
       await registerCustomerRequest(values);
+      await queryClient.fetchQuery({
+        queryKey: customerSessionQueryKey,
+        queryFn: fetchCustomerSession
+      });
+      void showBrowserNotification("Welcome to Fab Shopper", {
+        body: "Your account is ready. Track orders, save your details, and stay updated from your account hub.",
+        icon: "/favicon.ico",
+        tag: "welcome-account-created"
+      });
 
       toast.success("Account created! Welcome to Fab Shopper.");
-      router.push(redirectParams || "/account");
+      router.push(getPostAuthRedirect());
       router.refresh();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to register. Please try again.";

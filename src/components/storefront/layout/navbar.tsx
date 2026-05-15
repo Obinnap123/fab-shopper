@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Search, ShoppingCart, Menu, X, User, Heart, Loader2 } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
+import { customerSessionQueryKey, fetchCustomerSession } from "@/features/customer-auth/session"
 import { useCartStore } from "@/stores/cartStore"
 import { useWishlistStore } from "@/stores/wishlistStore"
 
@@ -63,18 +64,12 @@ export function Navbar() {
   });
 
   const { data: customerSession } = useQuery({
-    queryKey: ["customer-session"],
-    queryFn: async () => {
-      const res = await fetch("/api/customer-auth/session");
-      const json = await res.json();
-      return json.data as {
-        id: string
-        firstName: string
-        lastName: string
-        email: string | null
-        unreadNotifications: number
-      } | null;
-    }
+    queryKey: customerSessionQueryKey,
+    queryFn: fetchCustomerSession,
+    staleTime: 0,
+    retry: false,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true
   });
 
   const handleSearchSubmit = (e: React.FormEvent) => {
