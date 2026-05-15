@@ -25,6 +25,15 @@ type CheckoutAddress = {
   state: string;
 };
 
+type CustomerDetails = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+};
+
+type CheckoutFieldErrors = Partial<Record<keyof CustomerDetails | keyof CheckoutAddress, string>>;
+
 type CustomerAccountResponse = {
   data?: {
     customer: {
@@ -48,12 +57,21 @@ const EMPTY_SHIPPING_ADDRESS: CheckoutAddress = {
   state: ""
 };
 
+const EMPTY_CUSTOMER_DETAILS: CustomerDetails = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: ""
+};
+
 export default function CheckoutView() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [shippingFee, setShippingFee] = useState(DEFAULT_SHIPPING_FEE);
   const { items, total, clearCart } = useCartStore();
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<CheckoutFieldErrors>({});
+  const [customerDetails, setCustomerDetails] = useState<CustomerDetails>(EMPTY_CUSTOMER_DETAILS);
   const [shippingAddress, setShippingAddress] = useState<CheckoutAddress>(EMPTY_SHIPPING_ADDRESS);
 
   const subtotal = total();
@@ -77,17 +95,25 @@ export default function CheckoutView() {
         }
 
         const payload = (await res.json()) as CustomerAccountResponse;
+        const customer = payload.data?.customer;
         const savedAddress = payload.data?.customer.shippingAddress;
 
-        if (!savedAddress) {
-          return;
+        if (customer) {
+          setCustomerDetails({
+            firstName: customer.firstName ?? "",
+            lastName: customer.lastName ?? "",
+            email: customer.email ?? "",
+            phone: customer.phone ?? ""
+          });
         }
 
-        setShippingAddress({
-          address: savedAddress.address ?? "",
-          city: savedAddress.city ?? "",
-          state: savedAddress.state ?? ""
-        });
+        if (savedAddress) {
+          setShippingAddress({
+            address: savedAddress.address ?? "",
+            city: savedAddress.city ?? "",
+            state: savedAddress.state ?? ""
+          });
+        }
       } catch (fetchError) {
         if ((fetchError as Error).name !== "AbortError") {
           console.error(fetchError);
@@ -111,6 +137,67 @@ export default function CheckoutView() {
     }
 
     return data as { verified: boolean; finalized: boolean; alreadyProcessed: boolean; orderId: string };
+  };
+
+  const updateFieldError = (field: keyof CheckoutFieldErrors, value: string) => {
+    setFieldErrors((current) => {
+      if (!current[field]) {
+        return current;
+      }
+
+      const next = { ...current };
+      if (value.trim()) {
+        delete next[field];
+      }
+      return next;
+    });
+  };
+
+  const validateCustomerDetails = () => {
+    const nextErrors: CheckoutFieldErrors = {};
+
+    if (!customerDetails.firstName.trim()) nextErrors.firstName = "First name is required.";
+    if (!customerDetails.lastName.trim()) nextErrors.lastName = "Last name is required.";
+    if (!customerDetails.email.trim()) nextErrors.email = "Email address is required.";
+    if (!customerDetails.phone.trim()) nextErrors.phone = "Phone number is required.";
+
+    setFieldErrors((current) => ({ ...current, ...nextErrors }));
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const validateShippingAddress = () => {
+    const nextErrors: CheckoutFieldErrors = {};
+
+    if (!shippingAddress.address.trim()) nextErrors.address = "Street address is required.";
+    if (!shippingAddress.state.trim()) nextErrors.state = "State is required.";
+    if (!shippingAddress.city.trim()) nextErrors.city = "City is required.";
+
+    setFieldErrors((current) => ({ ...current, ...nextErrors }));
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleCustomerContinue = () => {
+    if (!validateCustomerDetails()) {
+      const message = "Please complete all customer details before continuing.";
+      setError(message);
+      toast.error(message);
+      return;
+    }
+
+    setError(null);
+    setStep(2);
+  };
+
+  const handleShippingContinue = () => {
+    if (!validateShippingAddress()) {
+      const message = "Please complete all shipping fields before continuing.";
+      setError(message);
+      toast.error(message);
+      return;
+    }
+
+    setError(null);
+    setStep(3);
   };
 
   const handleCheckout = async () => {
@@ -210,14 +297,67 @@ export default function CheckoutView() {
               Customer Details
             </h1>
             <div className="grid gap-4 md:grid-cols-2">
-              <input className="h-12 rounded border border-[rgba(26,60,46,0.2)] px-4 bg-transparent outline-none focus:border-[var(--brand-green)]" placeholder="First Name" />
-              <input className="h-12 rounded border border-[rgba(26,60,46,0.2)] px-4 bg-transparent outline-none focus:border-[var(--brand-green)]" placeholder="Last Name" />
-              <input className="h-12 rounded border border-[rgba(26,60,46,0.2)] px-4 bg-transparent outline-none focus:border-[var(--brand-green)]" placeholder="Email Address" />
-              <input className="h-12 rounded border border-[rgba(26,60,46,0.2)] px-4 bg-transparent outline-none focus:border-[var(--brand-green)]" placeholder="Phone Number (+234)" />
+              <div>
+                <input
+                  value={customerDetails.firstName}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setCustomerDetails((current) => ({ ...current, firstName: value }));
+                    updateFieldError("firstName", value);
+                  }}
+                  required
+                  className="h-12 w-full rounded border border-[rgba(26,60,46,0.2)] px-4 bg-transparent outline-none focus:border-[var(--brand-green)]"
+                  placeholder="First Name"
+                />
+                {fieldErrors.firstName ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.firstName}</p> : null}
+              </div>
+              <div>
+                <input
+                  value={customerDetails.lastName}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setCustomerDetails((current) => ({ ...current, lastName: value }));
+                    updateFieldError("lastName", value);
+                  }}
+                  required
+                  className="h-12 w-full rounded border border-[rgba(26,60,46,0.2)] px-4 bg-transparent outline-none focus:border-[var(--brand-green)]"
+                  placeholder="Last Name"
+                />
+                {fieldErrors.lastName ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.lastName}</p> : null}
+              </div>
+              <div>
+                <input
+                  value={customerDetails.email}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setCustomerDetails((current) => ({ ...current, email: value }));
+                    updateFieldError("email", value);
+                  }}
+                  required
+                  type="email"
+                  className="h-12 w-full rounded border border-[rgba(26,60,46,0.2)] px-4 bg-transparent outline-none focus:border-[var(--brand-green)]"
+                  placeholder="Email Address"
+                />
+                {fieldErrors.email ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.email}</p> : null}
+              </div>
+              <div>
+                <input
+                  value={customerDetails.phone}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setCustomerDetails((current) => ({ ...current, phone: value }));
+                    updateFieldError("phone", value);
+                  }}
+                  required
+                  className="h-12 w-full rounded border border-[rgba(26,60,46,0.2)] px-4 bg-transparent outline-none focus:border-[var(--brand-green)]"
+                  placeholder="Phone Number (+234)"
+                />
+                {fieldErrors.phone ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.phone}</p> : null}
+              </div>
             </div>
             <button
               className="h-12 w-full bg-[var(--brand-gold)] text-[13px] font-semibold uppercase tracking-[0.12em] text-[var(--brand-green)] hover:opacity-90 transition-opacity"
-              onClick={() => setStep(2)}
+              onClick={handleCustomerContinue}
             >
               Continue to Shipping
             </button>
@@ -230,24 +370,48 @@ export default function CheckoutView() {
               Shipping
             </h1>
             <div className="grid gap-4 md:grid-cols-2">
-              <input
-                value={shippingAddress.address}
-                onChange={(event) => setShippingAddress((current) => ({ ...current, address: event.target.value }))}
-                className="h-12 rounded border border-[rgba(26,60,46,0.2)] px-4 md:col-span-2 bg-transparent outline-none focus:border-[var(--brand-green)]"
-                placeholder="Street Address"
-              />
-              <input
-                value={shippingAddress.state}
-                onChange={(event) => setShippingAddress((current) => ({ ...current, state: event.target.value }))}
-                className="h-12 rounded border border-[rgba(26,60,46,0.2)] px-4 bg-transparent outline-none focus:border-[var(--brand-green)]"
-                placeholder="State"
-              />
-              <input
-                value={shippingAddress.city}
-                onChange={(event) => setShippingAddress((current) => ({ ...current, city: event.target.value }))}
-                className="h-12 rounded border border-[rgba(26,60,46,0.2)] px-4 bg-transparent outline-none focus:border-[var(--brand-green)]"
-                placeholder="City"
-              />
+              <div className="md:col-span-2">
+                <input
+                  value={shippingAddress.address}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setShippingAddress((current) => ({ ...current, address: value }));
+                    updateFieldError("address", value);
+                  }}
+                  required
+                  className="h-12 w-full rounded border border-[rgba(26,60,46,0.2)] px-4 bg-transparent outline-none focus:border-[var(--brand-green)]"
+                  placeholder="Street Address"
+                />
+                {fieldErrors.address ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.address}</p> : null}
+              </div>
+              <div>
+                <input
+                  value={shippingAddress.state}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setShippingAddress((current) => ({ ...current, state: value }));
+                    updateFieldError("state", value);
+                  }}
+                  required
+                  className="h-12 w-full rounded border border-[rgba(26,60,46,0.2)] px-4 bg-transparent outline-none focus:border-[var(--brand-green)]"
+                  placeholder="State"
+                />
+                {fieldErrors.state ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.state}</p> : null}
+              </div>
+              <div>
+                <input
+                  value={shippingAddress.city}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setShippingAddress((current) => ({ ...current, city: value }));
+                    updateFieldError("city", value);
+                  }}
+                  required
+                  className="h-12 w-full rounded border border-[rgba(26,60,46,0.2)] px-4 bg-transparent outline-none focus:border-[var(--brand-green)]"
+                  placeholder="City"
+                />
+                {fieldErrors.city ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.city}</p> : null}
+              </div>
             </div>
             <div className="space-y-3 text-sm text-[var(--brand-green)]/80 mt-6">
               <p className="font-semibold mb-2">Select your shipping rate:</p>
@@ -273,7 +437,7 @@ export default function CheckoutView() {
               </button>
               <button
                 className="h-12 w-2/3 bg-[var(--brand-gold)] text-[13px] font-semibold uppercase tracking-[0.12em] text-[var(--brand-green)] hover:opacity-90 transition-opacity"
-                onClick={() => setStep(3)}
+                onClick={handleShippingContinue}
               >
                 Continue to Payment
               </button>

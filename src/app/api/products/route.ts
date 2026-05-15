@@ -36,10 +36,6 @@ const createProductSchema = z.object({
       z.object({
         size: z.string().optional(),
         color: z.string().optional(),
-        material: z.string().optional(),
-        fitType: z.string().optional(),
-        stockQuantity: z.preprocess(coerceNumberish, z.number().int().nonnegative().default(0)),
-        price: z.preprocess(coerceNumberish, z.number().positive().optional()),
         images: z.array(z.string()).optional(),
         sku: z.string().optional()
       })
@@ -220,10 +216,6 @@ export async function POST(request: Request) {
               create: variants.map((variant) => ({
                 size: variant.size,
                 color: variant.color,
-                material: variant.material,
-                fitType: variant.fitType,
-                stockQuantity: variant.stockQuantity ?? 0,
-                price: variant.price,
                 images: variant.images ?? [],
                 sku: variant.sku
               }))

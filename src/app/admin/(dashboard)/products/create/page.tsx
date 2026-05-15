@@ -39,11 +39,7 @@ const productSchema = z.object({
     .array(
       z.object({
         size: z.string().optional(),
-        color: z.string().optional(),
-        material: z.string().optional(),
-        fitType: z.string().optional(),
-        stockQuantity: z.string().min(1, "Stock is required"),
-        price: z.string().optional()
+        color: z.string().optional()
       })
     )
     .default([])
@@ -151,10 +147,10 @@ export default function CreateProductPage() {
     handleUpload(event.dataTransfer.files);
   };
 
-  const handlePreview = form.handleSubmit((values) => {
-    setPreviewData(values);
+  const handlePreview = () => {
+    setPreviewData(form.getValues());
     setPreviewOpen(true);
-  });
+  };
 
   const onSubmit = form.handleSubmit(async (values) => {
     setErrorMessage(null);
@@ -187,11 +183,7 @@ export default function CreateProductPage() {
         values.productType === "VARIABLE"
           ? values.variants.map((variant) => ({
               size: variant.size || undefined,
-              color: variant.color || undefined,
-              material: variant.material || undefined,
-              fitType: variant.fitType || undefined,
-              stockQuantity: parseNumberish(variant.stockQuantity) ?? 0,
-              price: parseNumberish(variant.price)
+              color: variant.color || undefined
             }))
           : []
     };
@@ -272,7 +264,7 @@ export default function CreateProductPage() {
               }`}
             >
               <p className="font-semibold text-forest">Product with Variations</p>
-              <p className="mt-2 text-sm text-forest/60">Sizes, colors, materials, and more.</p>
+              <p className="mt-2 text-sm text-forest/60">Sizes and colors for this product.</p>
             </button>
           </div>
         </SectionCard>
@@ -385,16 +377,16 @@ export default function CreateProductPage() {
         <SectionCard title="Pricing & Inventory" subtitle="Set pricing and stock levels.">
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
-              <Label>Price (₦)</Label>
+              <Label>Price (&#8358;)</Label>
               <Input type="number" inputMode="decimal" {...form.register("price")} placeholder="25000" />
               <FieldError message={form.formState.errors.price?.message} />
             </div>
             <div className="space-y-2">
-              <Label>Cost Price (₦)</Label>
+              <Label>Cost Price (&#8358;)</Label>
               <Input type="number" inputMode="decimal" {...form.register("costPrice")} placeholder="15000" />
             </div>
             <div className="space-y-2">
-              <Label>Discounted Price (₦)</Label>
+              <Label>Discounted Price (&#8358;)</Label>
               <Input type="number" inputMode="decimal" {...form.register("discountedPrice")} placeholder="20000" />
             </div>
             <div className="space-y-2">
@@ -439,41 +431,20 @@ export default function CreateProductPage() {
                 fields.map((field, index) => (
                   <div
                     key={field.id}
-                    className="grid gap-3 rounded-2xl border border-forest/10 p-4 md:grid-cols-6"
+                    className="grid gap-3 rounded-2xl border border-forest/10 p-4 md:grid-cols-2"
                   >
-                    <div className="space-y-2 md:col-span-1">
+                    <div className="space-y-2">
                       <Label>Size</Label>
                       <Input {...form.register(`variants.${index}.size`)} placeholder="M" />
                     </div>
-                    <div className="space-y-2 md:col-span-1">
+                    <div className="space-y-2">
                       <Label>Color</Label>
-                      <Input {...form.register(`variants.${index}.color`)} placeholder="Black" />
+                      <Input {...form.register(`variants.${index}.color`)} placeholder="Black, White, Pink" />
+                      <p className="text-xs text-forest/60">
+                        Use commas if this variation comes in multiple colors.
+                      </p>
                     </div>
-                    <div className="space-y-2 md:col-span-1">
-                      <Label>Material</Label>
-                      <Input {...form.register(`variants.${index}.material`)} placeholder="Silk" />
-                    </div>
-                    <div className="space-y-2 md:col-span-1">
-                      <Label>Fit Type</Label>
-                      <Input {...form.register(`variants.${index}.fitType`)} placeholder="Slim" />
-                    </div>
-                    <div className="space-y-2 md:col-span-1">
-                      <Label>Stock</Label>
-                      <Input
-                        type="number"
-                        inputMode="numeric"
-                        {...form.register(`variants.${index}.stockQuantity`)}
-                        placeholder="0"
-                      />
-                      <FieldError
-                        message={form.formState.errors.variants?.[index]?.stockQuantity?.message}
-                      />
-                    </div>
-                    <div className="space-y-2 md:col-span-1">
-                      <Label>Price (₦)</Label>
-                      <Input type="number" inputMode="decimal" {...form.register(`variants.${index}.price`)} placeholder="25000" />
-                    </div>
-                    <div className="md:col-span-6 flex justify-end">
+                    <div className="md:col-span-2 flex justify-end">
                       <Button
                         type="button"
                         variant="outline"
@@ -489,7 +460,7 @@ export default function CreateProductPage() {
                 ))
               ) : (
                 <p className="text-sm text-forest/60">
-                  No variations yet. Add size/color combinations below.
+                  No variations yet. Add size and available color details below.
                 </p>
               )}
 
@@ -500,11 +471,7 @@ export default function CreateProductPage() {
                 onClick={() =>
                   append({
                     size: "",
-                    color: "",
-                    material: "",
-                    fitType: "",
-                    stockQuantity: "0",
-                    price: ""
+                    color: ""
                   })
                 }
               >
@@ -526,7 +493,13 @@ export default function CreateProductPage() {
                 type="button"
                 variant="outline"
                 className="rounded-full border-cream/60 bg-transparent text-cream hover:bg-white/15"
-                onClick={() => form.reset()}
+                onClick={() => {
+                  form.reset();
+                  setImages([]);
+                  setErrorMessage(null);
+                  setPreviewData(null);
+                  setPreviewOpen(false);
+                }}
               >
                 Clear Fields
               </Button>
@@ -575,7 +548,7 @@ export default function CreateProductPage() {
               <div className="grid gap-2 md:grid-cols-2">
                 <div>
                   <p className="text-xs uppercase tracking-[0.3em] text-forest/50">Price</p>
-                  <p className="font-semibold text-forest">₦{previewData.price}</p>
+                  <p className="font-semibold text-forest">{"\u20A6"}{previewData.price}</p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-[0.3em] text-forest/50">Stock</p>
@@ -596,6 +569,3 @@ export default function CreateProductPage() {
     </>
   );
 }
-
-
-

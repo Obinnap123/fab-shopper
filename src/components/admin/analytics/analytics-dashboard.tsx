@@ -28,12 +28,12 @@ type ProductSummary = {
 
 type AnalyticsDashboardProps = {
   salesSeries: SeriesPoint[];
-  shippingSeries: SeriesPoint[];
+  owedSeries: SeriesPoint[];
   totalSales: number;
-  shippingSpend: number;
+  totalOwed: number;
+  totalOrdered: number;
   grossProfit: number | null;
   netProfit: number | null;
-  expenses: number;
   missingCostPrices: number;
   onlineTransactions: number;
   offlineTransactions: number;
@@ -53,12 +53,12 @@ const formatCurrency = (value: number) =>
 
 export function AnalyticsDashboard({
   salesSeries,
-  shippingSeries,
+  owedSeries,
   totalSales,
-  shippingSpend,
+  totalOwed,
+  totalOrdered,
   grossProfit,
   netProfit,
-  expenses,
   missingCostPrices,
   onlineTransactions,
   offlineTransactions,
@@ -78,11 +78,11 @@ export function AnalyticsDashboard({
     return salesSeries;
   }, [range, salesSeries]);
 
-  const shippingData = useMemo(() => {
-    if (range === "last-6") return shippingSeries.slice(-6);
-    if (range === "last-3") return shippingSeries.slice(-3);
-    return shippingSeries;
-  }, [range, shippingSeries]);
+  const owedData = useMemo(() => {
+    if (range === "last-6") return owedSeries.slice(-6);
+    if (range === "last-3") return owedSeries.slice(-3);
+    return owedSeries;
+  }, [range, owedSeries]);
 
   const rangeLabel = useMemo(() => {
     if (range === "last-3") return "Last 3 Months";
@@ -94,10 +94,10 @@ export function AnalyticsDashboard({
     const rows = [
       ["Metric", "Value"],
       ["Total Sales", formatCurrency(totalSales)],
-      ["Shipping Spend", formatCurrency(shippingSpend)],
+      ["Total Owed", formatCurrency(totalOwed)],
+      ["Total Ordered", formatCurrency(totalOrdered)],
       ["Gross Profit", grossProfit === null ? "N/A" : formatCurrency(grossProfit)],
       ["Net Profit", netProfit === null ? "N/A" : formatCurrency(netProfit)],
-      ["Expenses", formatCurrency(expenses)],
       ["Online Transactions", onlineTransactions.toString()],
       ["Offline Transactions", offlineTransactions.toString()]
     ];
@@ -210,19 +210,25 @@ export function AnalyticsDashboard({
               <AnalyticsLineChart data={chartData} color="#1a3c2e" />
             </SectionCard>
             <SectionCard
-              title="Shipping Spend"
+              title="Total Owed"
               subtitle={`${rangeLabel}`}
               actions={
                 <span className="text-sm font-semibold text-forest">
-                  {formatCurrency(shippingSpend)}
+                  {formatCurrency(totalOwed)}
                 </span>
               }
             >
-              <AnalyticsLineChart data={shippingData} color="#c9a84c" />
+              <AnalyticsLineChart data={owedData} color="#c9a84c" />
             </SectionCard>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-[0_12px_30px_rgba(26,60,46,0.08)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-forest/60">
+                Total Ordered
+              </p>
+              <p className="mt-4 text-2xl font-semibold text-forest">{formatCurrency(totalOrdered)}</p>
+            </div>
             <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-[0_12px_30px_rgba(26,60,46,0.08)]">
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-forest/60">
                 Gross Profit
@@ -238,12 +244,6 @@ export function AnalyticsDashboard({
               <p className="mt-4 text-2xl font-semibold text-forest">
                 {netProfit === null ? "—" : formatCurrency(netProfit)}
               </p>
-            </div>
-            <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-[0_12px_30px_rgba(26,60,46,0.08)]">
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-forest/60">
-                Expenses
-              </p>
-              <p className="mt-4 text-2xl font-semibold text-forest">{formatCurrency(expenses)}</p>
             </div>
           </div>
         </div>

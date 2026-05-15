@@ -102,37 +102,37 @@ export default async function AdminDashboardPage() {
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-gold">Dashboard</p>
             <h1 className="text-2xl font-semibold text-forest">{greeting}, {adminName}</h1>
-            <p className="text-sm text-forest/60">
-              Share your storefront link today.
+            <div className="flex flex-col items-start gap-2 text-sm text-forest/60 sm:block">
+              <span>Share your storefront link today.</span>
               <a
                 href="https://delightclosetrevolution.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="ml-2 inline-flex items-center gap-1 rounded-full bg-forest/5 px-3 py-1 text-forest/80 hover:bg-forest/10"
+                className="inline-flex max-w-full items-center gap-1 rounded-full bg-forest/5 px-3 py-1 text-forest/80 hover:bg-forest/10 sm:ml-2"
               >
-                delightclosetrevolution.com
+                <span className="truncate">delightclosetrevolution.com</span>
                 <BadgeCheck className="h-4 w-4 text-gold" />
               </a>
-            </p>
+            </div>
           </div>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
-          <div className="space-y-6">
-            <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-[0_12px_30px_rgba(26,60,46,0.08)]">
+          <div className="min-w-0 space-y-6">
+            <div className="overflow-hidden rounded-3xl border border-forest/10 bg-white p-4 shadow-[0_12px_30px_rgba(26,60,46,0.08)] sm:p-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-semibold text-forest">Business Overview</h2>
                   <p className="text-sm text-forest/60">Here is how your business is doing today</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
                   <Button asChild variant="outline" size="sm">
                     <a href="/reports/fab-shopper-business-report.csv" download>
                       Download Report
                     </a>
                   </Button>
                   <Select defaultValue="This Month">
-                    <SelectTrigger className="h-9 w-[170px] rounded-full text-xs font-semibold uppercase tracking-[0.2em] text-forest bg-white">
+                    <SelectTrigger className="h-9 w-full rounded-full bg-white text-xs font-semibold uppercase tracking-[0.2em] text-forest sm:w-[170px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -208,8 +208,8 @@ export default async function AdminDashboardPage() {
                 ))}
               </div>
 
-              <div className="mt-6 rounded-2xl border border-forest/10 bg-white p-5">
-                <div className="flex items-center justify-between">
+              <div className="mt-6 overflow-hidden rounded-2xl border border-forest/10 bg-white p-4 sm:p-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.3em] text-forest/60">
                       Sales Overview
@@ -234,66 +234,68 @@ export default async function AdminDashboardPage() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-[0_12px_30px_rgba(26,60,46,0.08)]">
+            <div className="min-w-0 rounded-3xl border border-forest/10 bg-white p-4 shadow-[0_12px_30px_rgba(26,60,46,0.08)] sm:p-6">
               <h3 className="text-lg font-semibold text-forest">Recent Orders</h3>
-              <div className="mt-6 overflow-x-auto rounded-2xl border border-forest/10">
-                <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr_1fr] gap-4 border-b border-forest/5 bg-neutral-50 px-6 py-3 text-[10px] font-semibold uppercase tracking-[0.25em] text-forest/50">
+              <div className="-mx-4 mt-6 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+                <div className="min-w-[720px] rounded-2xl border border-forest/10 md:min-w-0">
+                  <div className="grid min-w-[720px] grid-cols-[1.6fr_1fr_1fr_1fr_1fr] gap-4 border-b border-forest/5 bg-neutral-50 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.25em] text-forest/50 sm:px-6 md:min-w-0">
                   <span>Order Number</span>
                   <span>Total</span>
                   <span>Status</span>
                   <span>Payment</span>
                   <span>Date</span>
-                </div>
+                  </div>
                 
-                {recentOrders.length === 0 ? (
-                  <div className="p-10 text-center text-forest/60">
-                    <Package className="mx-auto h-12 w-12 opacity-20 mb-3" />
-                    <p className="text-sm font-semibold text-forest">No record found</p>
-                    <p className="mt-1 text-sm text-forest/60 max-w-[250px] mx-auto">
-                      Record your first order to start seeing your numbers grow.
-                    </p>
-                    <Button asChild size="sm" className="mt-5 rounded-full border border-forest/10">
-                      <Link href="/admin/orders?new=1">Record Order</Link>
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-forest/5">
-                    {recentOrders.map((order: RecentOrder) => (
-                      <Link
-                        key={order.id}
-                        href={`/admin/orders?id=${order.id}`}
-                        className="grid grid-cols-[1.6fr_1fr_1fr_1fr_1fr] items-center gap-4 px-6 py-4 transition hover:bg-forest/5"
-                      >
-                        <div>
-                          <p className="text-sm font-semibold text-forest">{order.orderNumber}</p>
-                          <p className="text-xs text-forest/60 mt-0.5">
-                            {order.customer.firstName} {order.customer.lastName}
-                          </p>
-                        </div>
-                        <div className="text-sm font-medium text-forest">
-                          {formatCurrency(Number(order.total))}
-                        </div>
-                        <div>
-                          <span className="inline-flex rounded-full bg-sky-50 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-sky-600">
-                            {order.status}
-                          </span>
-                        </div>
-                        <div>
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider ${
-                              order.paymentStatus === "PAID"
-                                ? "bg-green-50 text-green-600"
-                                : "bg-amber-50 text-amber-600"
-                            }`}
-                          >
-                            {order.paymentStatus}
-                          </span>
-                        </div>
-                        <div className="text-xs text-forest/60">{formatDate(order.createdAt)}</div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
+                  {recentOrders.length === 0 ? (
+                    <div className="p-10 text-center text-forest/60">
+                      <Package className="mx-auto mb-3 h-12 w-12 opacity-20" />
+                      <p className="text-sm font-semibold text-forest">No record found</p>
+                      <p className="mx-auto mt-1 max-w-[250px] text-sm text-forest/60">
+                        Record your first order to start seeing your numbers grow.
+                      </p>
+                      <Button asChild size="sm" className="mt-5 rounded-full border border-forest/10">
+                        <Link href="/admin/orders?new=1">Record Order</Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-forest/5">
+                      {recentOrders.map((order: RecentOrder) => (
+                        <Link
+                          key={order.id}
+                          href={`/admin/orders?id=${order.id}`}
+                          className="grid min-w-[720px] grid-cols-[1.6fr_1fr_1fr_1fr_1fr] items-center gap-4 px-4 py-4 transition hover:bg-forest/5 sm:px-6 md:min-w-0"
+                        >
+                          <div>
+                            <p className="text-sm font-semibold text-forest">{order.orderNumber}</p>
+                            <p className="mt-0.5 text-xs text-forest/60">
+                              {order.customer.firstName} {order.customer.lastName}
+                            </p>
+                          </div>
+                          <div className="text-sm font-medium text-forest">
+                            {formatCurrency(Number(order.total))}
+                          </div>
+                          <div>
+                            <span className="inline-flex rounded-full bg-sky-50 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-sky-600">
+                              {order.status}
+                            </span>
+                          </div>
+                          <div>
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider ${
+                                order.paymentStatus === "PAID"
+                                  ? "bg-green-50 text-green-600"
+                                  : "bg-amber-50 text-amber-600"
+                              }`}
+                            >
+                              {order.paymentStatus}
+                            </span>
+                          </div>
+                          <div className="text-xs text-forest/60">{formatDate(order.createdAt)}</div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               
               {recentOrders.length > 0 && (
@@ -306,8 +308,8 @@ export default async function AdminDashboardPage() {
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="rounded-3xl border border-forest/10 bg-emerald-50 p-6 shadow-[0_12px_30px_rgba(26,60,46,0.08)]">
+          <div className="min-w-0 space-y-6">
+            <div className="rounded-3xl border border-forest/10 bg-emerald-50 p-4 shadow-[0_12px_30px_rgba(26,60,46,0.08)] sm:p-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-semibold text-forest">To-do List</h3>
                 <button className="text-[10px] font-semibold uppercase tracking-[0.25em] text-forest/60 hover:text-forest transition">
@@ -339,7 +341,7 @@ export default async function AdminDashboardPage() {
               )}
             </div>
 
-            <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-[0_12px_30px_rgba(26,60,46,0.08)]">
+            <div className="rounded-3xl border border-forest/10 bg-white p-4 shadow-[0_12px_30px_rgba(26,60,46,0.08)] sm:p-6">
               <h3 className="text-base font-semibold text-forest">Quick Actions</h3>
               <div className="mt-4 space-y-2.5 text-sm font-medium text-forest/80">
                 {[

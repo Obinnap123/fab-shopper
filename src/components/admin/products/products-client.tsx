@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { TablePaginationFooter } from "@/components/admin/ui/table-pagination-footer";
 import { fetchJson } from "@/lib/fetch-json";
 
 const productSchema = z.object({
@@ -520,51 +521,13 @@ export function ProductsClient() {
         </TableBody>
       </Table>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-forest/60">
-        <div className="flex items-center gap-2">
-          <span>Show</span>
-          <Select value="10" disabled>
-            <SelectTrigger className="h-10 w-[90px] rounded-full text-xs font-semibold uppercase tracking-[0.2em]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-            </SelectContent>
-          </Select>
-          <span>Entries</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-full"
-            disabled={page <= 1}
-            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-          >
-            Previous
-          </Button>
-          {pageNumbers.map((pageNumber) => (
-            <Button
-              key={pageNumber}
-              size="sm"
-              variant={pageNumber === page ? "default" : "outline"}
-              className="rounded-full"
-              onClick={() => setPage(pageNumber)}
-            >
-              {pageNumber}
-            </Button>
-          ))}
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-full"
-            disabled={page >= totalPages}
-            onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      <TablePaginationFooter
+        page={page}
+        totalPages={totalPages}
+        pageNumbers={pageNumbers}
+        pageSizeLabel={String(pageSize)}
+        onPageChange={setPage}
+      />
         </>
       ) : (
         <div className="rounded-2xl border border-dashed border-forest/20 bg-forest/5 px-6 py-12 text-center">

@@ -22,7 +22,6 @@ type Product = {
 
 const accordionItems = [
   { title: "Product Description", key: "description" },
-  { title: "Size Guide", key: "size" },
   { title: "Shipping & Delivery", key: "shipping" },
   { title: "Returns & Exchange Policy", key: "returns" }
 ];
@@ -47,11 +46,18 @@ export function ProductDetail({ product }: { product: Product }) {
 
     return Array.from(new Set(normalized ?? []));
   }, [product.variants]);
-  const colors = useMemo(
-    () =>
-      Array.from(new Set(product.variants?.map((variant) => variant.color).filter(Boolean))) as string[],
-    [product.variants]
-  );
+  const colors = useMemo(() => {
+    const normalized = product.variants
+      ?.flatMap((variant) =>
+        (variant.color ?? "")
+          .split(",")
+          .map((color) => color.trim())
+          .filter((color) => color.length > 0)
+      )
+      .filter((color) => color.length > 0);
+
+    return Array.from(new Set(normalized ?? []));
+  }, [product.variants]);
 
   return (
     <div className="grid gap-12 md:grid-cols-2">
@@ -154,16 +160,7 @@ export function ProductDetail({ product }: { product: Product }) {
             <label className="text-xs uppercase tracking-[0.15em] text-[var(--brand-green)]">
               Color
             </label>
-            <div className="flex flex-wrap gap-3">
-              {colors.map((color) => (
-                <button
-                  key={color}
-                  className="h-8 w-8 rounded-full border-2 border-[var(--brand-gold)] transition hover:scale-110"
-                  style={{ background: color }}
-                  title={color}
-                />
-              ))}
-            </div>
+            <p className="text-sm text-[var(--text-muted)]">{colors.join(", ")}</p>
           </div>
         )}
 
@@ -231,9 +228,8 @@ export function ProductDetail({ product }: { product: Product }) {
                   >
                     <div className="pb-3 text-sm text-[var(--text-muted)]">
                       {item.key === "description" && (product.longDescription || product.shortDescription)}
-                      {item.key === "size" && "Size guidance coming soon."}
                       {item.key === "shipping" && "Within Lagos: ₦4,500 • Abuja: ₦7,500 • Other states: from ₦6,500 • Pick up: Free"}
-                      {item.key === "returns" && "Returns are accepted within 7 days of delivery."}
+                      {item.key === "returns" && "No return policy"}
                     </div>
                   </motion.div>
                 )}

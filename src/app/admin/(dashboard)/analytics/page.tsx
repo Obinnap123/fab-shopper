@@ -10,7 +10,7 @@ export default async function AnalyticsPage() {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
 
-  const [orders, orderItems, missingCostPrices, newCustomers] = await Promise.all([
+  const [orders, missingCostPrices, newCustomers] = await Promise.all([
     prisma.order.findMany({
       where: { createdAt: { gte: start } },
       select: {
@@ -26,9 +26,6 @@ export default async function AnalyticsPage() {
         customerId: true
       },
       orderBy: { createdAt: "desc" }
-    }),
-    prisma.orderItem.findMany({
-      include: { product: { select: { name: true, costPrice: true } } }
     }),
     prisma.product.count({ where: { costPrice: null } }),
     prisma.customer.count({
@@ -47,6 +44,7 @@ export default async function AnalyticsPage() {
     const value = orders
       .filter(
         (order) =>
+          order.paymentStatus === "PAID" &&
           order.createdAt.getFullYear() === month.getFullYear() &&
           order.createdAt.getMonth() === month.getMonth()
       )
@@ -54,19 +52,39 @@ export default async function AnalyticsPage() {
     return { month: monthLabels(month), value };
   });
 
-  const shippingSeries: SeriesPoint[] = months.map((month) => {
+  const owedSeries: SeriesPoint[] = months.map((month) => {
     const value = orders
       .filter(
         (order) =>
+          order.paymentStatus !== "PAID" &&
           order.createdAt.getFullYear() === month.getFullYear() &&
           order.createdAt.getMonth() === month.getMonth()
       )
-      .reduce((sum, order) => sum + Number(order.shippingFee), 0);
+      .reduce((sum, order) => sum + Number(order.total), 0);
     return { month: monthLabels(month), value };
   });
 
-  const totalSales = orders.reduce((sum, order) => sum + Number(order.total), 0);
-  const shippingSpend = orders.reduce((sum, order) => sum + Number(order.shippingFee), 0);
+  const totalSales = orders
+    .filter((order) => order.paymentStatus === "PAID")
+    .reduce((sum, order) => sum + Number(order.total), 0);
+  const totalOwed = orders
+    .filter((order) => order.paymentStatus !== "PAID")
+    .reduce((sum, order) => sum + Number(order.total), 0);
+  const totalOrdered = orders.reduce((sum, order) => sum + Number(order.total), 0);
+  const shippingSpend = orders
+    .filter((order) => order.paymentStatus === "PAID")
+    .reduce((sum, order) => sum + Number(order.shippingFee), 0);
+
+  const paidOrderIds = orders
+    .filter((order) => order.paymentStatus === "PAID")
+    .map((order) => order.id);
+
+  const orderItems = paidOrderIds.length
+    ? await prisma.orderItem.findMany({
+        where: { orderId: { in: paidOrderIds } },
+        include: { product: { select: { name: true, costPrice: true } } }
+      })
+    : [];
 
   let grossProfit = 0;
   let hasCostData = missingCostPrices === 0;
@@ -143,12 +161,12 @@ export default async function AnalyticsPage() {
     <>
       <AnalyticsDashboard
         salesSeries={salesSeries}
-        shippingSeries={shippingSeries}
+        owedSeries={owedSeries}
         totalSales={totalSales}
-        shippingSpend={shippingSpend}
+        totalOwed={totalOwed}
+        totalOrdered={totalOrdered}
         grossProfit={grossProfitValue}
         netProfit={netProfit}
-        expenses={0}
         missingCostPrices={missingCostPrices}
         onlineTransactions={onlineTransactions}
         offlineTransactions={offlineTransactions}

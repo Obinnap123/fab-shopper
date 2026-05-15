@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { TablePaginationFooter } from "@/components/admin/ui/table-pagination-footer";
 
 const orderSchema = z.object({
   customerId: z.string().min(1),
@@ -72,6 +73,8 @@ export function OrdersClient() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [statusOpen, setStatusOpen] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -86,16 +89,19 @@ export function OrdersClient() {
   });
 
   const { data: ordersData } = useQuery({
-    queryKey: ["orders", search, dateRange, deliveryFilter],
+    queryKey: ["orders", search, dateRange, deliveryFilter, page],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
       if (dateRange) params.set("dateRange", dateRange);
       if (deliveryFilter !== "all") params.set("delivery", deliveryFilter);
+      params.set("take", String(pageSize));
+      params.set("skip", String((page - 1) * pageSize));
       const res = await fetch(`/api/orders?${params.toString()}`);
       const json = await res.json();
       return json as { data: Order[]; total: number };
-    }
+    },
+    placeholderData: (previous) => previous
   });
 
   const { data: customers } = useQuery({
@@ -235,6 +241,10 @@ export function OrdersClient() {
     }
   }, [open]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [search, dateRange, deliveryFilter]);
+
   const quantity = form.watch("quantity");
   const price = form.watch("price");
 
@@ -248,6 +258,22 @@ export function OrdersClient() {
   const orders = ordersData?.data ?? [];
   const total = ordersData?.total ?? orders.length;
   const filteredOrders = useMemo(() => orders, [orders]);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const pageNumbers = useMemo(() => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+    const start = Math.max(1, page - 2);
+    const end = Math.min(totalPages, start + 4);
+    const adjustedStart = Math.max(1, end - 4);
+    return Array.from({ length: end - adjustedStart + 1 }, (_, index) => adjustedStart + index);
+  }, [page, totalPages]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   const filteredCustomers =
     (customers ?? []).filter((customer) =>
@@ -731,19 +757,14 @@ export function OrdersClient() {
         </div>
 
         {filteredOrders.length ? (
-          <div className="flex items-center gap-2 border-t border-forest/10 px-6 py-4 text-sm text-forest/60">
-            <span>Show</span>
-            <Select defaultValue="25">
-              <SelectTrigger className="h-9 w-[90px] rounded-full text-xs font-semibold uppercase tracking-[0.2em]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
-            <span>Entries</span>
+          <div className="border-t border-forest/10 px-6 py-4">
+            <TablePaginationFooter
+              page={page}
+              totalPages={totalPages}
+              pageNumbers={pageNumbers}
+              pageSizeLabel={String(pageSize)}
+              onPageChange={setPage}
+            />
           </div>
         ) : null}
       </div>

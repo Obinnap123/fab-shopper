@@ -40,11 +40,7 @@ const productSchema = z.object({
       z.object({
         id: z.string().optional(),
         size: z.string().optional(),
-        color: z.string().optional(),
-        material: z.string().optional(),
-        fitType: z.string().optional(),
-        stockQuantity: z.string().min(1, "Stock is required"),
-        price: z.string().optional()
+        color: z.string().optional()
       })
     )
     .default([])
@@ -70,11 +66,7 @@ function formatFieldPath(path: string) {
     const variantField = variantMatch[2];
     const variantLabels: Record<string, string> = {
       size: "size",
-      color: "color",
-      material: "material",
-      fitType: "fit type",
-      stockQuantity: "stock quantity",
-      price: "price"
+      color: "color"
     };
 
     return `Variation ${variantNumber} ${variantLabels[variantField] ?? variantField}`;
@@ -133,7 +125,7 @@ export default function EditProductPage() {
   const router = useRouter();
   const params = useParams();
   const id = params?.id as string;
-  
+
   const [images, setImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -198,11 +190,7 @@ export default function EditProductPage() {
         variants: (productData.variants || []).map((v: any) => ({
           id: v.id,
           size: v.size || "",
-          color: v.color || "",
-          material: v.material || "",
-          fitType: v.fitType || "",
-          stockQuantity: v.stockQuantity?.toString() || "0",
-          price: v.price?.toString() || ""
+          color: v.color || ""
         }))
       });
       setImages(productData.images || []);
@@ -265,10 +253,10 @@ export default function EditProductPage() {
     handleUpload(event.dataTransfer.files);
   };
 
-  const handlePreview = form.handleSubmit((values) => {
-    setPreviewData(values);
+  const handlePreview = () => {
+    setPreviewData(form.getValues());
     setPreviewOpen(true);
-  });
+  };
 
   const onSubmit = form.handleSubmit(async (values) => {
     setErrorMessage(null);
@@ -303,11 +291,7 @@ export default function EditProductPage() {
           ? values.variants.map((variant) => ({
               id: variant.id || undefined,
               size: variant.size || undefined,
-              color: variant.color || undefined,
-              material: variant.material || undefined,
-              fitType: variant.fitType || undefined,
-              stockQuantity: parseNumberish(variant.stockQuantity) ?? 0,
-              price: parseNumberish(variant.price)
+              color: variant.color || undefined
             }))
           : []
     };
@@ -363,14 +347,14 @@ export default function EditProductPage() {
   const productType = form.watch("productType");
 
   if (isLoadingProduct) {
-      return (
-          <>
-              <div className="flex justify-center items-center h-64 text-forest/60">
-                  <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                  Loading product details...
-              </div>
-          </>
-      )
+    return (
+      <>
+        <div className="flex justify-center items-center h-64 text-forest/60">
+          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          Loading product details...
+        </div>
+      </>
+    );
   }
 
   return (
@@ -414,7 +398,7 @@ export default function EditProductPage() {
               }`}
             >
               <p className="font-semibold text-forest">Product with Variations</p>
-              <p className="mt-2 text-sm text-forest/60">Sizes, colors, materials, and more.</p>
+              <p className="mt-2 text-sm text-forest/60">Sizes and colors for this product.</p>
             </button>
           </div>
         </SectionCard>
@@ -505,7 +489,7 @@ export default function EditProductPage() {
                 ) : null}
               </div>
               {images.length ? (
-               <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   {images.map((url) => (
                     <div key={url} className="group relative overflow-hidden rounded-2xl border border-forest/10">
                       <img src={url} alt="Product" className="h-32 w-full object-cover" />
@@ -527,16 +511,16 @@ export default function EditProductPage() {
         <SectionCard title="Pricing & Inventory" subtitle="Set pricing and stock levels.">
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
-              <Label>Price (₦)</Label>
+              <Label>Price (&#8358;)</Label>
               <Input type="number" inputMode="decimal" {...form.register("price")} placeholder="25000" />
               <FieldError message={form.formState.errors.price?.message} />
             </div>
             <div className="space-y-2">
-              <Label>Cost Price (₦)</Label>
+              <Label>Cost Price (&#8358;)</Label>
               <Input type="number" inputMode="decimal" {...form.register("costPrice")} placeholder="15000" />
             </div>
             <div className="space-y-2">
-              <Label>Discounted Price (₦)</Label>
+              <Label>Discounted Price (&#8358;)</Label>
               <Input type="number" inputMode="decimal" {...form.register("discountedPrice")} placeholder="20000" />
             </div>
             <div className="space-y-2">
@@ -581,41 +565,20 @@ export default function EditProductPage() {
                 fields.map((field, index) => (
                   <div
                     key={field.id}
-                    className="grid gap-3 rounded-2xl border border-forest/10 p-4 md:grid-cols-6"
+                    className="grid gap-3 rounded-2xl border border-forest/10 p-4 md:grid-cols-2"
                   >
-                    <div className="space-y-2 md:col-span-1">
+                    <div className="space-y-2">
                       <Label>Size</Label>
                       <Input {...form.register(`variants.${index}.size`)} placeholder="M" />
                     </div>
-                    <div className="space-y-2 md:col-span-1">
+                    <div className="space-y-2">
                       <Label>Color</Label>
-                      <Input {...form.register(`variants.${index}.color`)} placeholder="Black" />
+                      <Input {...form.register(`variants.${index}.color`)} placeholder="Black, White, Pink" />
+                      <p className="text-xs text-forest/60">
+                        Use commas if this variation comes in multiple colors.
+                      </p>
                     </div>
-                    <div className="space-y-2 md:col-span-1">
-                      <Label>Material</Label>
-                      <Input {...form.register(`variants.${index}.material`)} placeholder="Silk" />
-                    </div>
-                    <div className="space-y-2 md:col-span-1">
-                      <Label>Fit Type</Label>
-                      <Input {...form.register(`variants.${index}.fitType`)} placeholder="Slim" />
-                    </div>
-                    <div className="space-y-2 md:col-span-1">
-                      <Label>Stock</Label>
-                      <Input
-                        type="number"
-                        inputMode="numeric"
-                        {...form.register(`variants.${index}.stockQuantity`)}
-                        placeholder="0"
-                      />
-                      <FieldError
-                        message={form.formState.errors.variants?.[index]?.stockQuantity?.message}
-                      />
-                    </div>
-                    <div className="space-y-2 md:col-span-1">
-                      <Label>Price (₦)</Label>
-                      <Input type="number" inputMode="decimal" {...form.register(`variants.${index}.price`)} placeholder="25000" />
-                    </div>
-                    <div className="md:col-span-6 flex justify-end">
+                    <div className="md:col-span-2 flex justify-end">
                       <Button
                         type="button"
                         variant="outline"
@@ -631,7 +594,7 @@ export default function EditProductPage() {
                 ))
               ) : (
                 <p className="text-sm text-forest/60">
-                  No variations yet. Add size/color combinations below.
+                  No variations yet. Add size and available color details below.
                 </p>
               )}
 
@@ -642,11 +605,7 @@ export default function EditProductPage() {
                 onClick={() =>
                   append({
                     size: "",
-                    color: "",
-                    material: "",
-                    fitType: "",
-                    stockQuantity: "0",
-                    price: ""
+                    color: ""
                   })
                 }
               >
@@ -728,7 +687,7 @@ export default function EditProductPage() {
           </DialogHeader>
           {previewData ? (
             <div className="space-y-4 text-sm text-forest/70">
-               <div>
+              <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-forest/50">Name</p>
                 <p className="text-base font-semibold text-forest">{previewData.name}</p>
               </div>
@@ -736,7 +695,7 @@ export default function EditProductPage() {
               <div className="grid gap-2 md:grid-cols-2">
                 <div>
                   <p className="text-xs uppercase tracking-[0.3em] text-forest/50">Price</p>
-                  <p className="font-semibold text-forest">₦{previewData.price}</p>
+                  <p className="font-semibold text-forest">{"\u20A6"}{previewData.price}</p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-[0.3em] text-forest/50">Stock</p>
