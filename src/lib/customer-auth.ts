@@ -1,8 +1,9 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { requiredEnv } from "@/lib/env";
 
 export const customerCookieName = "fab_customer_session";
-const secretKey = process.env.JWT_SECRET || "fallback_secret_for_development";
+const secretKey = process.env.JWT_SECRET ?? requiredEnv("NEXTAUTH_SECRET");
 const key = new TextEncoder().encode(secretKey);
 
 export type CustomerSession = {
@@ -48,7 +49,7 @@ export async function verifyCustomerToken(
   try {
     const { payload } = await jwtVerify(token, key);
     return payload as unknown as CustomerSession;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

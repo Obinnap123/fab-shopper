@@ -1,242 +1,59 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
-import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
-import { slugify } from "@/lib/slug";
-
-const coerceNumberish = (value: unknown) => {
-  if (typeof value === "number") return value;
-  if (typeof value !== "string") return value;
-
-  const normalized = value.replace(/[^\d.-]/g, "").trim();
-  if (!normalized) return undefined;
-
-  const numeric = Number(normalized);
-  return Number.isFinite(numeric) ? numeric : value;
-};
-
-const updateProductSchema = z.object({
-  name: z.string().min(2),
-  slug: z.string().optional(),
-  shortDescription: z.string().optional(),
-  longDescription: z.string().optional(),
-  productType: z.enum(["SIMPLE", "VARIABLE"]).optional(),
-  price: z.preprocess(coerceNumberish, z.number().positive()),
-  costPrice: z.preprocess(coerceNumberish, z.number().nonnegative().optional()),
-  discountedPrice: z.preprocess(coerceNumberish, z.number().nonnegative().optional()),
-  stockQuantity: z.preprocess(coerceNumberish, z.number().int().nonnegative().default(0)),
-  unit: z.string().optional(),
-  barcode: z.string().optional(),
-  status: z.enum(["PUBLISHED", "DRAFT", "OUT_OF_STOCK"]).optional(),
-  images: z.array(z.string()).optional(),
-  collectionIds: z.array(z.string()).optional(),
-  collectionName: z.string().optional(),
-  variants: z
-    .array(
-      z.object({
-        id: z.string().optional(),
-        size: z.string().optional(),
-        color: z.string().optional(),
-        images: z.array(z.string()).optional(),
-        sku: z.string().optional()
-      })
-    )
-    .optional()
-});
-
-function serializeProduct(
-  product: Prisma.ProductGetPayload<{
-    include: { collections: true; variants: true };
-  }>
-) {
-  return {
-    ...product,
-    price: Number(product.price),
-    discountedPrice: product.discountedPrice !== null ? Number(product.discountedPrice) : null,
-    costPrice: product.costPrice !== null ? Number(product.costPrice) : null,
-    variants: product.variants.map((variant) => ({
-      ...variant,
-      price: variant.price !== null ? Number(variant.price) : null
-    }))
-  };
-}
+import { isHttpError } from "@/lib/http-error";
+import { updateProductSchema } from "@/features/catalog/product-schemas";
+import {
+  deleteProduct,
+  getProductById,
+  updateProduct
+} from "@/features/catalog/product-service";
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const product = await prisma.product.findUnique({ 
-    where: { id },
-    include: { collections: true, variants: true }
-  });
+  const product = await getProductById(id);
   if (!product) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  return NextResponse.json({ data: serializeProduct(product) });
+  return NextResponse.json({ data: product });
 }
 
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  const body = await request.json().catch(() => null);
-  const parsed = updateProductSchema.safeParse(body);
+  try {
+    const { id } = await params;
+    const body = await request.json().catch(() => null);
+    const parsed = updateProductSchema.safeParse(body);
 
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload", issues: parsed.error.flatten() }, { status: 400 });
-  }
-
-  const {
-      name,
-      slug,
-      shortDescription,
-      longDescription,
-      productType,
-      price,
-      costPrice,
-      discountedPrice,
-      stockQuantity,
-      unit,
-      barcode,
-      status,
-      images,
-      collectionIds,
-      collectionName,
-      variants
-  } = parsed.data;
-
-  const existingProduct = await prisma.product.findUnique({ where: { id }, include: { collections: true, variants: true } });
-  if (!existingProduct) {
-     return NextResponse.json({ error: "Product not found" }, { status: 404 });
-  }
-
-  let finalSlug = existingProduct.slug;
-  if (slug && slug !== existingProduct.slug) {
-     const baseSlug = slugify(slug);
-     finalSlug = baseSlug;
-     let suffix = 1;
-     while (await prisma.product.count({ where: { slug: finalSlug, id: { not: id } } })) {
-       suffix += 1;
-       finalSlug = `${baseSlug}-${suffix}`;
-     }
-  }
-
-  const collectionLinks: { id: string }[] = [];
-
-  if (collectionIds?.length) {
-    collectionIds.forEach((cId) => {
-      if (!collectionLinks.some((link) => link.id === cId)) {
-        collectionLinks.push({ id: cId });
-      }
-    });
-  }
-
-  if (collectionName?.trim()) {
-    const trimmedName = collectionName.trim();
-    const collectionSlug = slugify(trimmedName);
-    let collection = await prisma.collection.findUnique({ where: { slug: collectionSlug } });
-    if (!collection) {
-      collection = await prisma.collection.create({
-        data: {
-          name: trimmedName,
-          slug: collectionSlug
-        }
-      });
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid payload", issues: parsed.error.flatten() }, { status: 400 });
     }
-    if (!collectionLinks.some((link) => link.id === collection.id)) {
-      collectionLinks.push({ id: collection.id });
-    }
+
+    const product = await updateProduct(id, parsed.data);
+    return NextResponse.json({ data: product });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to update product" },
+      { status: isHttpError(error) ? error.status : 500 }
+    );
   }
-
-  const existingCollectionIds = existingProduct.collections.map(c => c.id);
-  const collectionsToDisconnect = existingCollectionIds.filter(existingId => !collectionLinks.some(link => link.id === existingId));
-
-  const existingVariantIds = variants?.filter(v => v.id).map(v => v.id as string) || [];
-
-  const updateData: Prisma.ProductUpdateInput = {
-    name,
-    slug: finalSlug,
-    shortDescription,
-    longDescription,
-    productType: productType ?? "SIMPLE",
-    price,
-    costPrice,
-    discountedPrice,
-    stockQuantity,
-    unit,
-    barcode,
-    status: status ?? "DRAFT",
-    images: images ?? [],
-    collections: {
-       connect: collectionLinks,
-       disconnect: collectionsToDisconnect.map(cId => ({ id: cId }))
-    },
-    variants: variants?.length || productType === "VARIABLE" ? {
-       deleteMany: {
-          id: { notIn: existingVariantIds }
-       },
-       create: (variants || []).filter(v => !v.id).map(variant => ({
-            size: variant.size,
-            color: variant.color,
-            images: variant.images ?? [],
-            sku: variant.sku
-       })),
-       update: (variants || []).filter(v => !!v.id).map(variant => ({
-          where: { id: variant.id },
-          data: {
-             size: variant.size,
-             color: variant.color,
-             images: variant.images ?? [],
-             sku: variant.sku
-          }
-       }))
-    } : undefined
-  };
-
-  const product = await prisma.product.update({
-    where: { id },
-    data: updateData,
-    include: { collections: true, variants: true }
-  });
-
-  return NextResponse.json({ data: serializeProduct(product) });
 }
 
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-
-  const product = await prisma.product.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      orderItems: { select: { id: true }, take: 1 }
-    }
-  });
-
-  if (!product) {
-    return NextResponse.json({ error: "Product not found" }, { status: 404 });
-  }
-
-  if (product.orderItems.length > 0) {
+  try {
+    const { id } = await params;
+    await deleteProduct(id);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
     return NextResponse.json(
-      {
-        error:
-          "This product can't be deleted because it is linked to an order. Remove it from order history manually if you still need to archive it."
-      },
-      { status: 409 }
+      { error: error instanceof Error ? error.message : "Failed to delete product" },
+      { status: isHttpError(error) ? error.status : 500 }
     );
   }
-
-  await prisma.$transaction([
-    prisma.productVariant.deleteMany({ where: { productId: id } }),
-    prisma.productAttribute.deleteMany({ where: { productId: id } }),
-    prisma.product.delete({ where: { id } })
-  ]);
-
-  return NextResponse.json({ ok: true });
 }

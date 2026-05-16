@@ -3,6 +3,10 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { adminCookieName, signAdminToken } from "@/lib/auth";
+import {
+  ADMIN_SESSION_MAX_AGE_SECONDS,
+  createSessionCookieOptions
+} from "@/lib/session-cookie";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -54,11 +58,7 @@ export async function POST(request: Request) {
   response.cookies.set({
     name: adminCookieName,
     value: token,
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7
+    ...createSessionCookieOptions(ADMIN_SESSION_MAX_AGE_SECONDS)
   });
 
   return response;

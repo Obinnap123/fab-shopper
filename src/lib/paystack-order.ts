@@ -16,6 +16,14 @@ type FinalizeResult =
   | {
       finalized: false;
       alreadyProcessed: false;
+      reason: "insufficient_stock";
+      orderId: string;
+      orderNumber: string;
+      message: string;
+    }
+  | {
+      finalized: false;
+      alreadyProcessed: false;
       reason: "not_found";
     };
 
@@ -47,25 +55,57 @@ export async function finalizePaystackOrder(reference: string, paystackRef?: str
     }
 
     for (const item of order.items) {
-      await tx.product.update({
-        where: { id: item.productId },
+      const productUpdated = await tx.product.updateMany({
+        where: {
+          id: item.productId,
+          stockQuantity: { gte: item.quantity }
+        },
         data: {
           stockQuantity: { decrement: item.quantity }
         }
       });
 
+      if (productUpdated.count === 0) {
+        throw new Error(`Insufficient stock for product ${item.productId}`);
+      }
+
       if (item.variantId) {
-        await tx.productVariant.update({
-          where: { id: item.variantId },
+        const variantUpdated = await tx.productVariant.updateMany({
+          where: {
+            id: item.variantId,
+            stockQuantity: { gte: item.quantity }
+          },
           data: {
             stockQuantity: { decrement: item.quantity }
           }
         });
+
+        if (variantUpdated.count === 0) {
+          throw new Error(`Insufficient stock for variant ${item.variantId}`);
+        }
       }
     }
 
     return true;
+  }).catch((error: Error) => {
+    if (error.message.startsWith("Insufficient stock")) {
+      return "insufficient_stock" as const;
+    }
+
+    throw error;
   });
+
+  if (finalized === "insufficient_stock") {
+    return {
+      finalized: false,
+      alreadyProcessed: false,
+      reason: "insufficient_stock",
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      message:
+        "Payment was received, but we couldn't confirm stock for every item automatically. Please contact support so we can resolve your order."
+    };
+  }
 
   if (!finalized) {
     return {

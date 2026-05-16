@@ -53,7 +53,7 @@ export function StorefrontFooter() {
 
   return (
     <footer className="border-t border-[rgba(201,168,76,0.15)] bg-[var(--brand-green-dark)] text-white">
-      <div className="mx-auto grid w-full max-w-6xl gap-10 px-6 py-20 md:grid-cols-4">
+      <div className="mx-auto grid w-full max-w-6xl gap-10 px-6 py-20 md:grid-cols-2 md:px-8 xl:grid-cols-4">
         <div className="space-y-4">
           <p
             className="text-2xl text-[var(--brand-gold)]"

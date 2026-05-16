@@ -32,6 +32,17 @@ export async function POST(request: Request) {
       if (reference) {
         const result = await finalizePaystackOrder(reference, event.data.id?.toString());
 
+        if ("reason" in result && result.reason === "insufficient_stock") {
+          await (prisma as any).notification.create({
+            data: {
+              title: `Stock issue after payment for Order #${reference}`,
+              message: `Payment was confirmed by webhook for ${reference}, but stock could not be decremented automatically. Manual review is required.`,
+              type: "ORDER",
+              link: `/admin/orders?id=${result.orderId}`
+            }
+          });
+        }
+
         if (result.finalized) {
           await (prisma as any).notification.create({
             data: {

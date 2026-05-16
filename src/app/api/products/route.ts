@@ -1,132 +1,25 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
-import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
-import { slugify } from "@/lib/slug";
-
-const coerceNumberish = (value: unknown) => {
-  if (typeof value === "number") return value;
-  if (typeof value !== "string") return value;
-
-  const normalized = value.replace(/[^\d.-]/g, "").trim();
-  if (!normalized) return undefined;
-
-  const numeric = Number(normalized);
-  return Number.isFinite(numeric) ? numeric : value;
-};
-
-const createProductSchema = z.object({
-  name: z.string().min(2),
-  slug: z.string().optional(),
-  shortDescription: z.string().optional(),
-  longDescription: z.string().optional(),
-  productType: z.enum(["SIMPLE", "VARIABLE"]).optional(),
-  price: z.preprocess(coerceNumberish, z.number().positive()),
-  costPrice: z.preprocess(coerceNumberish, z.number().nonnegative().optional()),
-  discountedPrice: z.preprocess(coerceNumberish, z.number().nonnegative().optional()),
-  stockQuantity: z.preprocess(coerceNumberish, z.number().int().nonnegative().default(0)),
-  unit: z.string().optional(),
-  barcode: z.string().optional(),
-  status: z.enum(["PUBLISHED", "DRAFT", "OUT_OF_STOCK"]).optional(),
-  images: z.array(z.string()).optional(),
-  collectionIds: z.array(z.string()).optional(),
-  collectionName: z.string().optional(),
-  variants: z
-    .array(
-      z.object({
-        size: z.string().optional(),
-        color: z.string().optional(),
-        images: z.array(z.string()).optional(),
-        sku: z.string().optional()
-      })
-    )
-    .optional()
-});
-
-function serializeProduct(
-  product: Prisma.ProductGetPayload<{
-    include: { collections: true; variants: true };
-  }>
-) {
-  return {
-    ...product,
-    price: Number(product.price),
-    discountedPrice: product.discountedPrice !== null ? Number(product.discountedPrice) : null,
-    costPrice: product.costPrice !== null ? Number(product.costPrice) : null,
-    variants: product.variants.map((variant) => ({
-      ...variant,
-      price: variant.price !== null ? Number(variant.price) : null
-    }))
-  };
-}
+import { isHttpError } from "@/lib/http-error";
+import { createProductSchema } from "@/features/catalog/product-schemas";
+import { createProduct, listProducts } from "@/features/catalog/product-service";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limitParam = searchParams.get("limit");
-  const take = Number(limitParam ?? searchParams.get("take") ?? 20);
-  const skip = Number(searchParams.get("skip") ?? 0);
-  const search = searchParams.get("search")?.trim();
-  const status = searchParams.get("status") ?? undefined;
-  const productType = searchParams.get("productType") ?? undefined;
-  const collectionId = searchParams.get("collectionId") ?? undefined;
-  const sort = searchParams.get("sort") ?? "newest";
-  const minPrice = searchParams.get("minPrice");
-  const maxPrice = searchParams.get("maxPrice");
-  const stock = searchParams.get("stock");
-
-  const where: Record<string, unknown> = {};
-
-  if (search) {
-    where.OR = [
-      { name: { contains: search, mode: "insensitive" } },
-      { slug: { contains: search, mode: "insensitive" } }
-    ];
-  }
-
-  if (status && status !== "all") {
-    where.status = status;
-  }
-
-  if (productType && productType !== "all") {
-    where.productType = productType;
-  }
-
-  if (collectionId && collectionId !== "all") {
-    where.collections = { some: { id: collectionId } };
-  }
-
-  if (minPrice || maxPrice) {
-    where.price = {
-      ...(minPrice ? { gte: Number(minPrice) } : {}),
-      ...(maxPrice ? { lte: Number(maxPrice) } : {})
-    };
-  }
-
-  if (stock === "in") {
-    where.stockQuantity = { gt: 0 };
-  }
-
-  if (stock === "out") {
-    where.stockQuantity = { lte: 0 };
-  }
-
-  const orderBy: Prisma.ProductOrderByWithRelationInput =
-    sort === "price-asc"
-      ? { price: "asc" }
-      : sort === "price-desc"
-        ? { price: "desc" }
-        : { createdAt: "desc" };
-
-  const products = await prisma.product.findMany({
-    take: Number.isFinite(take) ? take : 20,
-    skip,
-    where,
-    include: { collections: true, variants: true },
-    orderBy
+  const result = await listProducts({
+    take: Number(limitParam ?? searchParams.get("take") ?? 20),
+    skip: Number(searchParams.get("skip") ?? 0),
+    search: searchParams.get("search")?.trim(),
+    status: searchParams.get("status"),
+    productType: searchParams.get("productType"),
+    collectionId: searchParams.get("collectionId"),
+    sort: searchParams.get("sort") ?? "newest",
+    minPrice: searchParams.get("minPrice"),
+    maxPrice: searchParams.get("maxPrice"),
+    stock: searchParams.get("stock")
   });
-  const total = await prisma.product.count({ where });
 
-  return NextResponse.json({ data: products.map(serializeProduct), total });
+  return NextResponse.json(result);
 }
 
 export async function POST(request: Request) {
@@ -141,104 +34,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const {
-      name,
-      slug,
-      shortDescription,
-      longDescription,
-      productType,
-      price,
-      costPrice,
-      discountedPrice,
-      stockQuantity,
-      unit,
-      barcode,
-      status,
-      images,
-      collectionIds,
-      collectionName,
-      variants
-    } = parsed.data;
-    const baseSlug = slug ? slugify(slug) : slugify(name);
-    let finalSlug = baseSlug;
-    let suffix = 1;
-
-    while (await prisma.product.count({ where: { slug: finalSlug } })) {
-      suffix += 1;
-      finalSlug = `${baseSlug}-${suffix}`;
-    }
-
-    const collectionLinks: { id: string }[] = [];
-
-    if (collectionIds?.length) {
-      collectionIds.forEach((id) => {
-        if (!collectionLinks.some((link) => link.id === id)) {
-          collectionLinks.push({ id });
-        }
-      });
-    }
-
-    if (collectionName?.trim()) {
-      const trimmedName = collectionName.trim();
-      const collectionSlug = slugify(trimmedName);
-      let collection = await prisma.collection.findUnique({ where: { slug: collectionSlug } });
-      if (!collection) {
-        collection = await prisma.collection.create({
-          data: {
-            name: trimmedName,
-            slug: collectionSlug
-          }
-        });
-      }
-      if (!collectionLinks.some((link) => link.id === collection.id)) {
-        collectionLinks.push({ id: collection.id });
-      }
-    }
-
-    const product = await prisma.product.create({
-      data: {
-        name,
-        slug: finalSlug,
-        shortDescription,
-        longDescription,
-        productType: productType ?? "SIMPLE",
-        price,
-        costPrice,
-        discountedPrice,
-        stockQuantity,
-        unit,
-        barcode,
-        status: status ?? "DRAFT",
-        images: images ?? [],
-        collections: collectionLinks.length ? { connect: collectionLinks } : undefined,
-        variants: variants?.length
-          ? {
-              create: variants.map((variant) => ({
-                size: variant.size,
-                color: variant.color,
-                images: variant.images ?? [],
-                sku: variant.sku
-              }))
-            }
-          : undefined
-      }
-    });
-
-    return NextResponse.json(
-      {
-        data: {
-          ...product,
-          price: Number(product.price),
-          discountedPrice: product.discountedPrice !== null ? Number(product.discountedPrice) : null,
-          costPrice: product.costPrice !== null ? Number(product.costPrice) : null
-        }
-      },
-      { status: 201 }
-    );
+    const product = await createProduct(parsed.data);
+    return NextResponse.json({ data: product }, { status: 201 });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to create product" },
-      { status: 500 }
+      { status: isHttpError(error) ? error.status : 500 }
     );
   }
 }

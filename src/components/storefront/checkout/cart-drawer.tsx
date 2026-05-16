@@ -4,8 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
+import { toast } from "sonner";
 
 import { calculateVatAmount, VAT_RATE } from "@/lib/vat";
+import { formatAvailableStockMessage } from "@/lib/stock-messages";
 import { useCartStore } from "@/stores/cartStore";
 
 export function CartDrawer() {
@@ -13,6 +15,13 @@ export function CartDrawer() {
   const subtotal = total();
   const vatAmount = calculateVatAmount(subtotal);
   const estimatedTotal = subtotal + vatAmount;
+  const handleIncreaseQuantity = (id: string, nextQuantity: number, stockQuantity?: number) => {
+    const result = updateQuantity(id, nextQuantity);
+
+    if (!result.ok) {
+      toast.error(result.message ?? formatAvailableStockMessage(stockQuantity ?? nextQuantity));
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -70,7 +79,7 @@ export function CartDrawer() {
                               <span className="px-3 text-sm">{item.quantity}</span>
                               <button
                                 className="px-3 py-1 text-sm"
-                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                onClick={() => handleIncreaseQuantity(item.id, item.quantity + 1, item.stockQuantity)}
                               >
                                 +
                               </button>

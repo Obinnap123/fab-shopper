@@ -7,6 +7,10 @@ import {
   createCustomerSessionToken,
   toCustomerSession
 } from "@/lib/customer-auth";
+import {
+  createSessionCookieOptions,
+  CUSTOMER_SESSION_MAX_AGE_SECONDS
+} from "@/lib/session-cookie";
 import type { LoginInput, RegisterInput } from "@/features/customer-auth/schemas";
 
 function normalizeEmail(email: string) {
@@ -75,11 +79,7 @@ export async function createCustomerAuthResponse(customer: AuthCustomer, message
   response.cookies.set({
     name: customerCookieName,
     value: token,
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30
+    ...createSessionCookieOptions(CUSTOMER_SESSION_MAX_AGE_SECONDS)
   });
 
   return response;
