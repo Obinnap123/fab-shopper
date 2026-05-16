@@ -55,7 +55,7 @@ export default function AdminLoginPage() {
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-2xl border border-forest/20 px-4 py-3 text-sm text-forest outline-none focus:border-forest"
+              className="w-full rounded-2xl border border-forest/20 px-4 py-3 text-base text-forest outline-none focus:border-forest"
               placeholder="admin@fabshopper.com"
               required
             />
@@ -67,7 +67,7 @@ export default function AdminLoginPage() {
             <PasswordInput
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-2xl border border-forest/20 px-4 py-3 text-sm text-forest outline-none focus:border-forest"
+              className="w-full rounded-2xl border border-forest/20 px-4 py-3 text-base text-forest outline-none focus:border-forest"
               placeholder="••••••••"
               required
             />
