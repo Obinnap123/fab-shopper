@@ -1,5 +1,5 @@
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { AppProviders } from "@/components/providers/app-providers";
 import NextTopLoader from "nextjs-toploader";
@@ -35,6 +35,12 @@ const serif = localFont({
 export const metadata: Metadata = {
   title: "Fab Shopper",
   description: "Luxury Lagos womenswear and accessories."
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover"
 };
 
 export default async function RootLayout({

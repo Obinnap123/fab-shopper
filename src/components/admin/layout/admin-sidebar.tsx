@@ -231,7 +231,7 @@ export function AdminSidebar({ role, onNavigate }: AdminSidebarProps) {
           );
         })}
       </nav>
-      <div className="shrink-0 border-t border-cream/10 px-4 py-4">
+      <div className="sticky bottom-0 shrink-0 border-t border-cream/10 bg-forest px-4 py-4">
         <button
           type="button"
           onClick={handleLogout}

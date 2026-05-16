@@ -14,13 +14,13 @@ export function AdminShell({ children, role }: AdminShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="relative h-dvh overflow-hidden bg-neutral-50 text-neutral-900">
-      <div className="grid h-full min-h-0 grid-cols-1 lg:grid-cols-[260px_1fr]">
-        <div className="hidden h-dvh lg:flex">
+    <div className="relative min-h-dvh overflow-x-clip bg-neutral-50 text-neutral-900">
+      <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[260px_1fr]">
+        <div className="hidden min-h-dvh lg:flex">
           <AdminSidebar role={role} />
         </div>
 
-        <div className="flex h-full min-h-0 flex-col">
+        <div className="flex min-h-dvh min-w-0 flex-col">
           <div className="sticky top-0 z-30 shrink-0 bg-neutral-50/90 backdrop-blur">
             <div className="flex items-center justify-between px-4 sm:px-6 pt-6 lg:hidden">
               <button
@@ -39,7 +39,7 @@ export function AdminShell({ children, role }: AdminShellProps) {
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 min-w-0 overflow-y-auto px-4 sm:px-6 lg:px-10 pb-10 scrollbar-hide">
+          <div className="flex-1 min-h-0 min-w-0 overflow-y-auto px-4 pb-10 sm:px-6 lg:px-10 scrollbar-hide">
             <div className="w-full max-w-full overflow-x-hidden">
               {children}
             </div>
@@ -53,7 +53,7 @@ export function AdminShell({ children, role }: AdminShellProps) {
             className="absolute inset-0 bg-black/40"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="relative z-50 h-full w-[82vw] max-w-xs bg-forest text-cream shadow-2xl">
+          <div className="relative z-50 flex h-full w-[82vw] max-w-xs flex-col overflow-hidden bg-forest text-cream shadow-2xl">
             <div className="flex items-center justify-between px-6 py-5">
               <div>
                 <p className="text-xs uppercase tracking-[0.4em] text-gold">Fab Shopper</p>
@@ -66,7 +66,9 @@ export function AdminShell({ children, role }: AdminShellProps) {
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <AdminSidebar role={role} onNavigate={() => setMobileOpen(false)} />
+            <div className="min-h-0 flex-1">
+              <AdminSidebar role={role} onNavigate={() => setMobileOpen(false)} />
+            </div>
           </div>
         </div>
       ) : null}
