@@ -73,7 +73,7 @@ export async function createAdminOrder(input: CreateOrderInput) {
 
   for (const item of input.items) {
     const product = await prisma.product.findUnique({ where: { id: item.productId } });
-    if (!product) {
+    if (!product || product.deletedAt) {
       throw new HttpError(`Product not found: ${item.productId}`, 404);
     }
 
@@ -134,7 +134,7 @@ export async function createCheckoutOrder(session: CustomerSession, input: Check
       include: { variants: true }
     });
 
-    if (!product) {
+    if (!product || product.deletedAt) {
       throw new HttpError(`Product ${item.productId} not found`, 404);
     }
 
