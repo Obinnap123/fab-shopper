@@ -40,7 +40,7 @@ type ProductListFilters = {
 };
 
 export async function listProducts(filters: ProductListFilters) {
-  const where: Prisma.ProductWhereInput = {};
+  const where: Prisma.ProductWhereInput = { deletedAt: null };
 
   if (filters.search) {
     where.OR = [
@@ -101,8 +101,8 @@ export async function listProducts(filters: ProductListFilters) {
 }
 
 export async function getProductById(id: string) {
-  const product = await prisma.product.findUnique({
-    where: { id },
+  const product = await prisma.product.findFirst({
+    where: { id, deletedAt: null },
     include: productDetailInclude
   });
 
@@ -200,8 +200,8 @@ export async function createProduct(input: CreateProductInput) {
 }
 
 export async function updateProduct(id: string, input: UpdateProductInput) {
-  const existingProduct = await prisma.product.findUnique({
-    where: { id },
+  const existingProduct = await prisma.product.findFirst({
+    where: { id, deletedAt: null },
     include: productDetailInclude
   });
 
@@ -278,6 +278,7 @@ export async function deleteProduct(id: string) {
     where: { id },
     select: {
       id: true,
+      deletedAt: true,
       orderItems: { select: { id: true }, take: 1 }
     }
   });
@@ -286,11 +287,20 @@ export async function deleteProduct(id: string) {
     throw new HttpError("Product not found", 404);
   }
 
+  if (product.deletedAt) {
+    return;
+  }
+
   if (product.orderItems.length > 0) {
-    throw new HttpError(
-      "This product can't be deleted because it is linked to an order. Remove it from order history manually if you still need to archive it.",
-      409
-    );
+    await prisma.product.update({
+      where: { id },
+      data: {
+        deletedAt: new Date(),
+        status: "DRAFT",
+        stockQuantity: 0
+      }
+    });
+    return;
   }
 
   await prisma.$transaction([
