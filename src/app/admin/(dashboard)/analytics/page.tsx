@@ -27,7 +27,7 @@ export default async function AnalyticsPage() {
       },
       orderBy: { createdAt: "desc" }
     }),
-    prisma.product.count({ where: { costPrice: null } }),
+    prisma.product.count({ where: { costPrice: null, deletedAt: null } }),
     prisma.customer.count({
       where: {
         deletedAt: null,

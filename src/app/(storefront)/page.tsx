@@ -15,7 +15,7 @@ export default async function HomePage() {
       slug: true,
       image: true,
       products: {
-        where: { status: "PUBLISHED" },
+        where: { status: "PUBLISHED", deletedAt: null },
         select: { id: true }
       }
     }

@@ -1,6 +1,4 @@
 node_modules
-.env
-.env.*
 .next
 out
 dist
@@ -13,3 +11,7 @@ coverage
 tsconfig.tsbuildinfo
 .vercel
 .env*.local
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+config.bat
