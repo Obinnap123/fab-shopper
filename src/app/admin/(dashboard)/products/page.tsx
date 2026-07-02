@@ -6,7 +6,9 @@ export const dynamic = "force-dynamic";
 
 export default async function ProductsPage() {
   try {
-    const products = await prisma.product.findMany();
+    const products = await prisma.product.findMany({
+      where: { deletedAt: null }
+    });
 
     const totalRetailValue = products.reduce((acc, p) => acc + (Number(p.price) * p.stockQuantity), 0);
     const totalInventoryValue = products.reduce((acc, p) => acc + (Number(p.costPrice || 0) * p.stockQuantity), 0);
