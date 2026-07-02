@@ -18,7 +18,7 @@ export async function GET() {
         select: { products: true }
       },
       products: {
-        where: { status: "PUBLISHED" },
+        where: { status: "PUBLISHED", deletedAt: null },
         select: { id: true }
       }
     }

@@ -42,6 +42,7 @@ async function getCollectionProducts(slug: string) {
     const products = await prisma.product.findMany({
       where: {
         status: "PUBLISHED",
+        deletedAt: null,
         collections: {
           some: { slug }
         }
